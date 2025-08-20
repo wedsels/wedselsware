@@ -27,19 +27,21 @@ void Seek( int time ) {
 
 double fsin( double x ) {
     static constexpr int luts = 8192;
+    static constexpr double tpi = 2.0 * M_PI;
+    static constexpr double ipti = 1.0 / tpi;
+
     static const ::std::array< double, luts > lut = [] {
         ::std::array< double, luts > arr{};
-
-        for ( int i = 0; i < luts; i++ )
-            arr[ i ] = ::sin( 2.0 * M_PI * i / luts );
-
+        for ( int i = 0; i < luts; ++i )
+            arr[ i ] = ::std::sin( tpi * i / luts );
         return arr;
     }();
 
-    while ( x < 0.0 ) x += 2.0 * M_PI;
-    while ( x >= 2.0 * M_PI ) x -= 2.0 * M_PI;
+    x = ::std::fmod( x, tpi );
+    if ( x < 0.0 )
+        x += tpi;
 
-    return lut[ ( int )( x * luts / ( 2.0 * M_PI ) ) ];
+    return lut[ ( int )( x * ipti * luts ) ];
 }
 
 void Spectrum( double* data, ::uint32_t frames ) {
