@@ -2,6 +2,8 @@
 
 #include <fftw3.h>
 
+#include <array>
+
 #define BANDS ( INT )( WINHEIGHT / 2 )
 
 int lastsecond = 0;
@@ -21,6 +23,23 @@ void Seek( int time ) {
     ::swr_close( ::Playing.SWR );
     ::swr_init( ::Playing.SWR );
     ::swr_inject_silence( ::Playing.SWR, framecount * 2 );
+}
+
+double fsin( double x ) {
+    static constexpr int luts = 8192;
+    static const ::std::array< double, luts > lut = [] {
+        ::std::array< double, luts > arr{};
+
+        for ( int i = 0; i < luts; i++ )
+            arr[ i ] = ::sin( 2.0 * M_PI * i / luts );
+
+        return arr;
+    }();
+
+    while ( x < 0.0 ) x += 2.0 * M_PI;
+    while ( x >= 2.0 * M_PI ) x -= 2.0 * M_PI;
+
+    return lut[ ( int )( x * luts / ( 2.0 * M_PI ) ) ];
 }
 
 void Spectrum( double* data, ::uint32_t frames ) {
@@ -93,8 +112,16 @@ void Spectrum( double* data, ::uint32_t frames ) {
             for ( int x = w; x < w + change; x++ )
                 ::SetPixel( MIDPOINT + x * 2, i * 2, COLORALPHA );
         else
-            for ( int x = ::Bands[ i ]; x < w; x++ )
-                ::SetPixel( MIDPOINT + x * 2, i * 2, COLORPALE );
+            for ( int x = 0; x < w; x++ )
+                ::SetPixel(
+                    MIDPOINT + x * 2,
+                    i * 2,
+                    ::BGRA(
+                        127 * ( ::fsin( 0.02 * x + ::cursor ) + 1 ),
+                        127 * ( ::fsin( 0.02 * i + ::cursor + 2.0 ) + 1 ),
+                        127 * ( ::fsin( 0.02 * ( x + i ) + ::cursor + 4.0 ) + 1 )
+                    )
+                );
 
         ::Bands[ i ] = w;
     }
