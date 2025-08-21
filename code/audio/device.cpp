@@ -8,7 +8,7 @@
 static ::ma_context Context;
 static ::ma_device_config Config;
 
-struct DeviceWatcher : public ::IMMNotificationClient {
+struct DeviceWatcher : ::IMMNotificationClient {
     ::LONG refCount = 1;
 
     DeviceWatcher() = default;
