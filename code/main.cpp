@@ -235,6 +235,8 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
         if ( !down ) {
             if ( ::input::state::ctrl )
                 ::execute( L"cmd.exe", 2 );
+            else if ( ::input::state::alt )
+                ::SetDefaultDevice();
             else
                 ::execute( L"C:\\Program Files\\Mozilla Firefox\\firefox.exe" );
         }

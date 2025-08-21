@@ -60,57 +60,52 @@ void Spectrum( double* data, ::uint32_t frames ) {
 
     ::fftw_execute( p );
 
-    int fftBins = frames / 2 + 1;
+    int bins = frames / 2 + 1;
 
-    static const double minFreq = 20.0;
-    static const double maxFreq = 35000.0;
-    static const double bandWidth = ( maxFreq - minFreq ) / BANDS;
+    static const double minfq = 20.0;
+    static const double maxfq = 35000.0;
+    static const double bandwidth = ( maxfq - minfq ) / BANDS;
 
-    double maxMagnitude = ::std::numeric_limits< double >::epsilon();
-    for ( int i = 0; i < fftBins; i++ ) {
-        double magnitude = ::sqrt( fout[ i ][ 0 ] * fout[ i ][ 0 ] + fout[ i ][ 1 ] * fout[ i ][ 1 ] );
-        if ( magnitude > maxMagnitude )
-            maxMagnitude = magnitude;
-    }
+    double mmag = ::std::numeric_limits< double >::epsilon();
+    for ( int i = 0; i < bins; i++ )
+        mmag = ::std::max( mmag, ::sqrt( fout[ i ][ 0 ] * fout[ i ][ 0 ] + fout[ i ][ 1 ] * fout[ i ][ 1 ] ) );
 
-    for ( int i = 0; i < fftBins; i++ ) {
-        fout[ i ][ 0 ] /= maxMagnitude;
-        fout[ i ][ 1 ] /= maxMagnitude;
+    for ( int i = 0; i < bins; i++ ) {
+        fout[ i ][ 0 ] /= mmag;
+        fout[ i ][ 1 ] /= mmag;
     }
 
     for ( int i = 0; i < BANDS; i++ ) {
-        double lowFreq = minFreq + ( bandWidth * i );
-        double highFreq = minFreq + ( bandWidth * ( i + 1 ) );
+        double low = minfq + ( bandwidth * i );
+        double high = minfq + ( bandwidth * ( i + 1 ) );
 
-        int startBin = ( int )( ( lowFreq / ( ::Device.sampleRate / 2.0 ) ) * fftBins );
-        int endBin = ( int )( ( highFreq / ( ::Device.sampleRate / 2.0 ) ) * fftBins );
+        int start = ( int )( ( low / ( ::Device.sampleRate / 2.0 ) ) * bins );
+        int end = ( int )( ( high / ( ::Device.sampleRate / 2.0 ) ) * bins );
 
-        startBin = ::std::max( startBin, 0 );
-        endBin = ::std::min( endBin, fftBins - 1 );
+        start = ::std::max( start, 0 );
+        end = ::std::min( end, bins - 1 );
 
-        double magnitudeSum = 0.0;
-        int binCount = 0;
-        for ( int j = startBin; j <= endBin; j++ ) {
+        double sum = 0.0;
+        int count = 0;
+        for ( int j = start; j <= end; j++ ) {
             double magnitude = ::sqrt( fout[ j ][ 0 ] * fout[ j ][ 0 ] + fout[ j ][ 1 ] * fout[ j ][ 1 ] );
 
-            double frequency = j * ::Device.sampleRate / ( 0.05 * fftBins );
-            double weight = 1.0 + frequency / maxFreq;
-            magnitudeSum += magnitude * weight;
-            binCount++;
+            double fq = j * ::Device.sampleRate / ( 0.05 * bins );
+            double weight = 1.0 + fq / maxfq;
+            sum += magnitude * weight;
+            count++;
         }
 
-        double averageMagnitude = binCount > 0 ? magnitudeSum / binCount : 0.0;
-        averageMagnitude *= ::Saved::Volumes[ ::Saved::Playing ];
+        double avg = count > 0 ? sum / count : 0.0;
+        avg *= ::Saved::Volumes[ ::Saved::Playing ];
 
-        int w = ( int )::std::clamp( WINWIDTH / 2.0 * ::log10( 1.0 + averageMagnitude ), 1.0, ( WINWIDTH - MIDPOINT ) / 2.0 );
+        int w = ( int )::std::clamp( WINWIDTH / 2.0 * ::log10( 1.0 + avg ), 1.0, ( WINWIDTH - MIDPOINT ) / 2.0 );
 
         if ( w == ::Bands[ i ] )
             continue;
 
         int change = ::Bands[ i ] - w;
-        bool erase = change > 0;
-        
-        if ( erase )
+        if ( change > 0 )
             for ( int x = w; x < w + change; x++ )
                 ::SetPixel( MIDPOINT + x * 2, i * 2, COLORALPHA );
         else

@@ -3,6 +3,8 @@
 
 #include <miniaudio.h>
 
+#include <mmdeviceapi.h>
+
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libavformat/avformat.h>
@@ -134,10 +136,11 @@ extern void SetMixerVolume( ::uint32_t entry, double change );
 
 extern void Seek( int time );
 extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount );
-extern void SetVolume( double v );
+extern void SetVolume( double v = 0.0 );
 extern void ArchiveSong( ::std::wstring path );
 extern ::HRESULT SetSong( ::uint32_t song );
 extern ::HRESULT FFMPEG( ::std::wstring path, ::Play& Playing );
+extern ::HRESULT SetDefaultDevice();
 
 namespace queue {
     static inline void clear() {

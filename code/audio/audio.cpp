@@ -20,7 +20,7 @@
         return S_FALSE;
     }
     ::Saved::Playing = s.id;
-    ::SetVolume( 0 );
+    ::SetVolume();
 
     ::cursor = 0;
     ::Redraw( ::DrawType::Redo );

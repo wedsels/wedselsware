@@ -1,7 +1,6 @@
 #include "audio.hpp"
 
 #include <shellapi.h>
-#include <mmdeviceapi.h>
 #include <audiopolicy.h>
 
 inline ::IAudioSessionManager2* pSessionManager;
