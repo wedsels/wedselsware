@@ -9,9 +9,9 @@ static ::ma_context Context;
 static ::ma_device_config Config;
 
 struct DeviceWatcher : ::IMMNotificationClient {
-    ::LONG refCount = 1;
-
     DeviceWatcher() = default;
+
+    ::LONG refCount = 1;
 
     ::ULONG STDMETHODCALLTYPE AddRef() override {
         return InterlockedIncrement( &refCount );
