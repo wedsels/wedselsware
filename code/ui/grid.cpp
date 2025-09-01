@@ -88,7 +88,7 @@ void DrawSlide() {
         }
     );
 
-    r.l = ( int )( MIDPOINT * ( ::DisplayOffset / ( Display.size() + 1.0f ) ) );
+    r.l = ( int )( ( MIDPOINT - SPACING * 2 ) * ( ::DisplayOffset / ( ::std::max( ( int )Display.size() - COLUMNS * ROWS, COLUMNS * ROWS ) + 1.0f ) ) );
     r.r = r.l + SPACING * 2;
     l = 1.0f;
     ::DrawBox( r, COLORCORAL, l );
