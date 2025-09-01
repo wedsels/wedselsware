@@ -3,11 +3,8 @@
 ::HRESULT SetSong( ::uint32_t song ) {
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
-    if ( !::songs.contains( song ) ) {
-        ::Remove( song );
-
+    if ( !::songs.contains( song ) )
         return S_FALSE;
-    }
 
     ::Clean( ::Playing );
 
@@ -15,7 +12,6 @@
 
     if ( FAILED( ::FFMPEG( s.path, ::Playing ) ) ) {
         ::Clean( ::Playing );
-        ::Remove( song );
 
         return S_FALSE;
     }
@@ -36,14 +32,14 @@ void ArchiveSong( ::std::wstring path ) {
     media.path = path;
     media.encoding = path.substr( path.rfind( L'.' ) + 1 );
 
-    ::HANDLE hFile = ::CreateFileW( media.path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+    ::HANDLE file = ::CreateFileW( media.path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
     ::FILETIME creationTime;
-    ::GetFileTime( hFile, &creationTime, nullptr, nullptr );
+    ::GetFileTime( file, &creationTime, nullptr, nullptr );
     ::ULARGE_INTEGER ul;
     ul.LowPart = creationTime.dwLowDateTime;
     ul.HighPart = creationTime.dwHighDateTime;
     media.write = ul.QuadPart / 10000;
-    ::CloseHandle( hFile );
+    ::CloseHandle( file );
 
     ::Play play = {};
 

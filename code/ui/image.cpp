@@ -72,9 +72,8 @@
     ::uint8_t* ret = ::new ::uint8_t[ dataSize ];
     ::memcpy( ret, bits, dataSize );
 
-    for ( int i = 0; i < size * size; ++i ) {
+    for ( int i = 0; i < size * size; ++i )
         ::std::swap( ret[ i * 4 + 0 ], ret[ i * 4 + 2 ] );
-    }
 
     ::SelectObject( hdc, old );
     ::DeleteObject( hBitmap );

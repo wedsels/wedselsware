@@ -6,9 +6,6 @@
 
 #define BANDS ( INT )( WINHEIGHT / 2 )
 
-int lastsecond = 0;
-double lastcursor = 0.0;
-
 ::uint16_t Bands[ BANDS ];
 
 void Seek( int time ) {
@@ -177,17 +174,19 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
         else break;
     }
 
+    static int lastsecond = 0;
+
     if ( ::PauseDraw )
         ::ClearBars();
     else {
         ::Spectrum( ( double* )output, frames );
 
-        if ( ::lastsecond != ( int )::cursor )
+        if ( lastsecond != ( int )::cursor )
             ::Redraw( ::DrawType::Redo );
         else {
             ::DrawCursor();
             ::InitiateDraw();
         }
-        ::lastsecond = ( int )::cursor;
+        lastsecond = ( int )::cursor;
     }
 }
