@@ -4,7 +4,7 @@
 
 #include <array>
 
-#define BANDS ( INT )( WINHEIGHT / 2 )
+constexpr int BANDS = WINHEIGHT / 2;
 
 ::uint16_t Bands[ BANDS ];
 
@@ -63,24 +63,18 @@ void Spectrum( double* data, ::uint32_t frames ) {
     static const double maxfq = 35000.0;
     static const double bandwidth = ( maxfq - minfq ) / BANDS;
 
-    double mmag = ::std::numeric_limits< double >::epsilon();
+    double maxmag = ::std::numeric_limits< double >::epsilon();
     for ( int i = 0; i < bins; i++ )
-        mmag = ::std::max( mmag, ::sqrt( fout[ i ][ 0 ] * fout[ i ][ 0 ] + fout[ i ][ 1 ] * fout[ i ][ 1 ] ) );
+        maxmag = ::std::max( maxmag, ::sqrt( fout[ i ][ 0 ] * fout[ i ][ 0 ] + fout[ i ][ 1 ] * fout[ i ][ 1 ] ) );
 
     for ( int i = 0; i < bins; i++ ) {
-        fout[ i ][ 0 ] /= mmag;
-        fout[ i ][ 1 ] /= mmag;
+        fout[ i ][ 0 ] /= maxmag;
+        fout[ i ][ 1 ] /= maxmag;
     }
 
     for ( int i = 0; i < BANDS; i++ ) {
-        double low = minfq + ( bandwidth * i );
-        double high = minfq + ( bandwidth * ( i + 1 ) );
-
-        int start = ( int )( ( low / ( ::Device.sampleRate / 2.0 ) ) * bins );
-        int end = ( int )( ( high / ( ::Device.sampleRate / 2.0 ) ) * bins );
-
-        start = ::std::max( start, 0 );
-        end = ::std::min( end, bins - 1 );
+        int start = ( int )::std::max( 0.0, ( ( minfq + ( bandwidth * i ) ) / ( ::Device.sampleRate / 2.0 ) ) * bins );
+        int end = ( int )::std::min( bins - 1.0, ( ( minfq + ( bandwidth * ( i + 1 ) ) ) / ( ::Device.sampleRate / 2.0 ) ) * bins );
 
         double sum = 0.0;
         int count = 0;
