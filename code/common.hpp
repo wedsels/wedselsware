@@ -206,7 +206,7 @@ namespace input {
     struct click;
     inline ::std::unordered_map< ::rect, ::input::click > clicks;
 
-    inline ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey;
+    extern ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey;
 
     struct click {
         ::DrawType intensity = ::DrawType::Redo;
