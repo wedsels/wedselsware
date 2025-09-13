@@ -67,6 +67,8 @@ void GetDisplay( ::uint32_t entry ) {
 }
 
 void DrawSlide() {
+    static constexpr int grid = COLUMNS * ROWS;
+
     ::std::vector< ::uint32_t >& Display = ::GetDisplay();
 
     float l = 1.0f;
@@ -82,13 +84,13 @@ void DrawSlide() {
         COLORGHOST,
         l,
         ::input::click{
-            .lmb = []() { ::DisplayOffset = ::songs.size() * ( ::input::mouse.x / ( double )MIDPOINT ); },
+            .lmb = []() { ::DisplayOffset = ::std::max( ( int )::songs.size() - grid, grid ) * ( ::input::mouse.x / ( double )MIDPOINT ); },
             .rmb = []() { ::DisplayOffset = 0;  },
             .scrl = []( int s ) { ::DisplayOffset += s; }
         }
     );
 
-    r.l = ( int )( ( MIDPOINT - SPACING * 2 ) * ( ::DisplayOffset / ( ::std::max( ( int )Display.size() - COLUMNS * ROWS, COLUMNS * ROWS ) + 1.0f ) ) );
+    r.l = ( int )( ( MIDPOINT - SPACING * 2 ) * ( ::DisplayOffset / ( ::std::max( ( int )Display.size() - grid, grid ) + 1.0f ) ) );
     r.r = r.l + SPACING * 2;
     l = 1.0f;
     ::DrawBox( r, COLORCORAL, l );
