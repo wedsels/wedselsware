@@ -23,7 +23,7 @@ namespace input {
                 if ( ::input::state::ctrl )
                     ::queue::next( 1 );
                 else
-                    ::SetVolume( 0.01 );
+                    ::SetVolume( 0.05 );
             }
 
             return true;
@@ -33,7 +33,7 @@ namespace input {
                 if ( ::input::state::ctrl )
                     ::queue::next( -1 );
                 else
-                    ::SetVolume( -0.01 );
+                    ::SetVolume( -0.05 );
             }
 
             return true;

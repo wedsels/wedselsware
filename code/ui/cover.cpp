@@ -36,7 +36,7 @@ struct Cover : ::UI {
                 .rmb = []() { ::EnumNext( ::Saved::Playback ); },
                 .mmb = []() { ::EnumNext( ::Saved::Sorting ); ::Sort(); },
                 .xmb = []( int d ) { ::queue::next( d ); },
-                .scrl = []( int s ) { ::SetVolume( s * -0.01 ); }
+                .scrl = []( int s ) { ::SetVolume( s * -0.001 ); }
             };
 
             bool search = ::GridType == ::GridTypes::Search;
