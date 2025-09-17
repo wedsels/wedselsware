@@ -74,14 +74,13 @@ bool SkipInsert, SkipEnd;
         } else switch ( wParam ) {
             case WM_MOUSEMOVE: {
                     ::input::mouse = ( ( ::MSLLHOOKSTRUCT* )lParam )->pt;
-                    ::HWND under = ::WindowFromPoint( ::input::mouse );
                     ::input::mouse.x -= WINLEFT;
                     ::input::mouse.y -= WINTOP;
 
                     over = {};
 
                     ::RECT cr;
-                    if ( !::PauseDraw && ( ::desktophwnd == under ) && ( !::GetClipCursor( &cr ) || cr.right > WINLEFT ) )
+                    if ( !::PauseDraw && ::input::mouse.y + WINTOP < WINHEIGHT && ( !::GetClipCursor( &cr ) || cr.right > WINLEFT ) )
                         if ( ::input::mouse.x > 0 && ::input::mouse.x < MIDPOINT && ::input::mouse.y > 0 && ::input::mouse.y < WINHEIGHT )
                             for ( auto& i : ::input::clicks )
                                 if ( i.first.within( ::input::mouse ) ) {

@@ -38,7 +38,6 @@
 #define CURSOR ::LoadCursor( NULL, IDC_ARROW )
 
 inline ::HWND hwnd;
-inline ::HWND desktophwnd;
 
 extern ::HRESULT InitializeDirectory();
 extern ::HRESULT InitializeMixer();

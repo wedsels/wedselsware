@@ -143,7 +143,7 @@ void Load() {
     wc.lpfnWndProc = ::WndProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = L"Wedsels' Window";
-    wc.hIcon = ( ::HICON )::LoadImageW( hInstance, MAKEINTRESOURCEW( IDI_ICON1 ), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED );
+    wc.hIcon = ( ::HICON )::LoadImageW( hInstance, MAKEINTRESOURCEW( IDI_ICON1 ), IMAGE_ICON, 256, 256, LR_SHARED );
 
     ::RegisterClassW( &wc );
 
@@ -185,7 +185,6 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::Load();
 
     ::hwnd = ::Window( hInstance );
-    ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
 
     HER( ::InitializeDirectory() );
     HER( ::InitializeFont() );
