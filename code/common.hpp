@@ -18,9 +18,10 @@
 #include <mutex>
 #include <map>
 
-#define HR( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
-#define HER( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) { ::box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
-#define THREAD( body ) do { ::std::thread( [ & ] { body } ).detach(); } while ( 0 )
+#define LINEINFO do { ::LineInfo::Line = __LINE__; ::LineInfo::File = __FILE__; ::LineInfo::Func = __func__; } while ( 0 )
+#define HR( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
+#define HER( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) { ::box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
+#define THREAD( body ) do { ::std::thread( [ & ] { LINEINFO; body } ).detach(); } while ( 0 )
 
 #define WM_QUEUENEXT ( WM_USER + 1 )
 #define WM_KEYBOARD ( WM_USER + 2 )
@@ -39,7 +40,7 @@
 
 inline ::HWND hwnd;
 
-extern ::HRESULT InitializeDirectory();
+extern ::HRESULT InitializeDirectory( ::std::wstring path, ::std::function< void( ::std::wstring ) > add, ::std::function< void( ::std::wstring ) > remove );
 extern ::HRESULT InitializeMixer();
 extern ::HRESULT InitializeFont();
 extern ::HRESULT InitGraphics();
@@ -49,6 +50,14 @@ extern ::HRESULT InitDraw();
 
 extern void Mouse( int c, ::LPARAM l );
 extern void Keyboard( int c, ::LPARAM l );
+
+extern void UpdateDirectories( ::MSG& msg );
+
+namespace LineInfo {
+    inline int Line;
+    inline ::std::string File;
+    inline ::std::string Func;
+}
 
 namespace string {
     template< typename... Args >
@@ -190,6 +199,8 @@ enum struct DrawType { None, Normal, Redo };
 
 namespace input {
     inline ::rect hover;
+
+    inline bool passthrough;
 
     namespace state {
         inline bool lmb;

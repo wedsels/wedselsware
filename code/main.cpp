@@ -76,12 +76,22 @@ void Load() {
 ::LONG WINAPI Crash( ::EXCEPTION_POINTERS* exceptionInfo ) {
     ::Save();
 
-    ::SYSTEMTIME time;
-    ::GetSystemTime( &time );
-    char dumpFileName[ 256 ];
-    ::sprintf_s( dumpFileName, "crash_dump_%04d%02d%02d_%02d%02d%02d.dmp", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond );
-
-    ::HANDLE hFile = ::CreateFileA( dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
+    ::HANDLE hFile = ::CreateFileW(
+        ::string::wconcat(
+            ::LineInfo::File.substr( ::LineInfo::File.find_last_of( '\\' ) + 1 ).c_str(),
+            L" ",
+            ::LineInfo::Func.c_str(),
+            L" ",
+            ::LineInfo::Line,
+            L".dmp"
+        ).c_str(),
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
     if ( hFile == INVALID_HANDLE_VALUE )
         return EXCEPTION_EXECUTE_HANDLER;
 
@@ -174,27 +184,26 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::signal( SIGSEGV, []( int ) { ::Save(); } );
     ::signal( SIGABRT, []( int ) { ::Save(); } );
 
-    // if ( true ) {
-    //     ::AllocConsole();
-    //     ::FILE* fp;
-    //     ::freopen_s( &fp, "CONOUT$", "w", stdout );
-    //     ::freopen_s( &fp, "CONOUT$", "w", stderr );
-    //     ::freopen_s( &fp, "CONIN$", "r", stdin );
-    // }
+    // ::AllocConsole();
+    // ::FILE* fp;
+    // ::freopen_s( &fp, "CONOUT$", "w", stdout );
+    // ::freopen_s( &fp, "CONOUT$", "w", stderr );
+    // ::freopen_s( &fp, "CONIN$", "r", stdin );
 
     ::Load();
 
     ::hwnd = ::Window( hInstance );
 
-    HER( ::InitializeDirectory() );
+    // HER( ::InitializeDirectory( L"E:/Webs/" ) );
+    // HER( ::InitializeDirectory( L"E:/Apps/" ) );
+    HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, []( ::std::wstring p ) { ::Remove( ::string::hash( p ) ); } ) );
+
     HER( ::InitializeFont() );
     HER( ::InitGraphics() );
     HER( ::InitDevice() );
     HER( ::InitInput() );
     HER( ::InitDraw() );
     HER( ::InitializeMixer() );
-
-    ::std::filesystem::directory_iterator eit, dit( L"F:/SoundStuff/Sounds/" );
 
     ::MSG msg = { 0 };
     while ( ::GetMessageW( &msg, NULL, 0, 0 ) ) {
@@ -204,12 +213,7 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
         ::TranslateMessage( &msg );
         ::DispatchMessageW( &msg );
 
-        while ( dit != eit && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
-            if ( dit->is_regular_file() && !dit->is_symlink() )
-                ::ArchiveSong( dit->path().wstring() );
-
-            ++dit;
-        }
+        ::UpdateDirectories( msg );
     }
 
     ::Save();

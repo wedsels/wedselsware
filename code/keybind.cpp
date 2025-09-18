@@ -56,5 +56,6 @@ namespace input {
         { VK_RSHIFT, []( bool down ) { ::input::state::shift = down; return false; } },
         { VK_LCONTROL, []( bool down ) { ::input::state::ctrl = down; return false; } },
         { VK_RCONTROL, []( bool down ) { ::input::state::ctrl = down; return false; } },
+        { VK_NEXT, []( bool down ) { ::input::passthrough = down; return true; } }
     };
 }

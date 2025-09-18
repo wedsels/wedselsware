@@ -51,17 +51,17 @@ void Keyboard( int c, ::LPARAM l ) {
     ::Draw( ::DrawType::Redo );
 }
 
-bool SkipInsert, SkipEnd;
-
 ::LRESULT CALLBACK InputProc( int nCode, ::WPARAM wParam, ::LPARAM lParam ) {
+    static bool SkipInsert, SkipEnd;
+
     if ( nCode == HC_ACTION && ~nCode < 0 ) {
         if ( wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP ) {
             ::DWORD key = ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode;
             bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
 
-            if ( down && key == VK_INSERT && ( ::SkipInsert = !::SkipInsert ) )
+            if ( down && key == VK_INSERT && ( SkipInsert = !SkipInsert ) )
                 return -1;
-            if ( down && key == VK_END && ( ::SkipEnd = !::SkipEnd ) )
+            if ( down && key == VK_END && ( SkipEnd = !SkipEnd ) )
                 return -1;
 
             if ( auto it = ::input::globalkey.find( key ); it != ::input::globalkey.end() )
@@ -80,7 +80,7 @@ bool SkipInsert, SkipEnd;
                     over = {};
 
                     ::RECT cr;
-                    if ( !::PauseDraw && ::input::mouse.y + WINTOP < WINHEIGHT && ( !::GetClipCursor( &cr ) || cr.right > WINLEFT ) )
+                    if ( !::input::passthrough && !::PauseDraw && ( !::GetClipCursor( &cr ) || cr.right > WINLEFT ) )
                         if ( ::input::mouse.x > 0 && ::input::mouse.x < MIDPOINT && ::input::mouse.y > 0 && ::input::mouse.y < WINHEIGHT )
                             for ( auto& i : ::input::clicks )
                                 if ( i.first.within( ::input::mouse ) ) {
