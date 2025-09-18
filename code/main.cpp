@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "binary.hpp"
 #include "audio/audio.hpp"
 
 #define IDI_ICON1 101
@@ -7,70 +8,23 @@
 #include <csignal>
 
 void Save() {
-    ::std::ofstream o( "wedselsdata", ::std::ios::binary );
-    if ( !o ) return;
-
-    o.write( reinterpret_cast< char* >( &::Saved::Playing ), sizeof( ::Saved::Playing ) );
-    o.write( reinterpret_cast< char* >( &::Saved::Sorting ), sizeof( ::Saved::Sorting ) );
-    o.write( reinterpret_cast< char* >( &::Saved::Playback ), sizeof( ::Saved::Playback ) );
-
-    ::uint32_t queueSize = ::Saved::Queue.size();
-    o.write( reinterpret_cast< char* >( &queueSize ), sizeof( queueSize ) );
-    o.write( reinterpret_cast< char* >( ::Saved::Queue.data() ), queueSize * sizeof( ::uint32_t ) );
-
-    ::uint32_t mapSize = ::Saved::Volumes.size();
-    o.write( reinterpret_cast< char* >( &mapSize ), sizeof( mapSize ) );
-    for ( const auto& [ key, value ] : ::Saved::Volumes ) {
-        o.write( reinterpret_cast< const char* >( &key ), sizeof( key ) );
-        o.write( reinterpret_cast< const char* >( &value ), sizeof( value ) );
-    }
-
-    ::uint32_t mixerSize = ::Saved::Mixers.size();
-    o.write( reinterpret_cast< char* >( &mixerSize ), sizeof( mixerSize ) );
-    for ( const auto& [ key, value ] : ::Saved::Mixers ) {
-        o.write( reinterpret_cast< const char* >( &key ), sizeof( key ) );
-        o.write( reinterpret_cast< const char* >( &value ), sizeof( value ) );
-    }
-
-    o.close();
+    ::Serializer s;
+    s.write( ::Saved::Playing );
+    s.write( ::Saved::Sorting );
+    s.write( ::Saved::Playback );
+    s.write( ::Saved::Queue );
+    s.write( ::Saved::Volumes );
+    s.write( ::Saved::Mixers );
 }
 
 void Load() {
-    ::std::ifstream i( "wedselsdata", ::std::ios::binary );
-    if ( !i ) return;
-
-    i.read( reinterpret_cast< char* >( &::Saved::Playing ), sizeof( ::Saved::Playing ) );
-    i.read( reinterpret_cast< char* >( &::Saved::Sorting ), sizeof( ::Saved::Sorting ) );
-    i.read( reinterpret_cast< char* >( &::Saved::Playback ), sizeof( ::Saved::Playback ) );
-
-    ::uint32_t queueSize;
-    i.read( reinterpret_cast< char* >( &queueSize ), sizeof( queueSize ) );
-    ::Saved::Queue.resize( queueSize );
-    i.read( reinterpret_cast< char* >( ::Saved::Queue.data() ), queueSize * sizeof( ::uint32_t ) );
-
-    ::uint32_t mapSize;
-    i.read( reinterpret_cast< char* >( &mapSize ), sizeof( mapSize ) );
-    ::Saved::Volumes.clear();
-    for ( ::uint32_t u = 0; u < mapSize; ++u ) {
-        ::uint32_t key;
-        double value;
-        i.read( reinterpret_cast< char* >( &key ), sizeof( key ) );
-        i.read( reinterpret_cast< char* >( &value ), sizeof( value ) );
-        ::Saved::Volumes[ key ] = value;
-    }
-
-    ::uint32_t mixerSize;
-    i.read( reinterpret_cast< char* >( &mixerSize ), sizeof( mixerSize ) );
-    ::Saved::Mixers.clear();
-    for ( ::uint32_t u = 0; u < mixerSize; ++u ) {
-        ::uint32_t key;
-        double value;
-        i.read( reinterpret_cast< char* >( &key ), sizeof( key ) );
-        i.read( reinterpret_cast< char* >( &value ), sizeof( value ) );
-        ::Saved::Mixers[ key ] = value;
-    }
-
-    i.close();
+    ::Deserializer d;
+    d.read( ::Saved::Playing );
+    d.read( ::Saved::Sorting );
+    d.read( ::Saved::Playback );
+    d.read( ::Saved::Queue );
+    d.read( ::Saved::Volumes );
+    d.read( ::Saved::Mixers );
 }
 
 ::LONG WINAPI Crash( ::EXCEPTION_POINTERS* exceptionInfo ) {
