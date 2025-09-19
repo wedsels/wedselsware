@@ -1,30 +1,30 @@
 #include "common.hpp"
 #include "ui/ui.hpp"
 
-#define ESAFECALL( type ) do { if ( ::input::clicks[ over ].type ) ::input::clicks[ over ].type(); } while ( 0 )
-#define ISAFECALL( type, i ) do { if ( ::input::clicks[ over ].type ) ::input::clicks[ over ].type( i ); } while ( 0 )
-#define BLOCKCALL( type, msg, lparam ) do { if ( ::input::clicks[ over ].type ) { ::Message( msg, wParam, lparam ); return -1; } } while ( 0 )
+#define ESAFECALL( type ) do { if ( ::Input::clicks[ over ].type ) ::Input::clicks[ over ].type(); } while ( 0 )
+#define ISAFECALL( type, i ) do { if ( ::Input::clicks[ over ].type ) ::Input::clicks[ over ].type( i ); } while ( 0 )
+#define BLOCKCALL( type, msg, lparam ) do { if ( ::Input::clicks[ over ].type ) { ::Message( msg, wParam, lparam ); return -1; } } while ( 0 )
 
-::rect over = {};
+::Rect over = {};
 
 void Mouse( int c, ::LPARAM l ) {
     switch( c ) {
         case WM_MOUSEMOVE:
-                ::input::hover = *( ::rect* )l;
+                ::Input::hover = *( ::Rect* )l;
 
-                if ( !::input::hover.empty() )
+                if ( !::Input::hover.empty() )
                     ESAFECALL( hvr );
             break;
         case WM_LBUTTONDOWN:
-                ::input::state::lmb = true;
+                ::Input::State::lmb = true;
                 ESAFECALL( lmb );
             break;
         case WM_RBUTTONDOWN:
-                ::input::state::rmb = true;
+                ::Input::State::rmb = true;
                 ESAFECALL( rmb );
             break;
         case WM_MBUTTONDOWN:
-                ::input::state::mmb = true;
+                ::Input::State::mmb = true;
                 ESAFECALL( mmb );
             break;
         case WM_XBUTTONDOWN:
@@ -64,7 +64,7 @@ void Keyboard( int c, ::LPARAM l ) {
             if ( down && key == VK_END && ( SkipEnd = !SkipEnd ) )
                 return -1;
 
-            if ( auto it = ::input::globalkey.find( key ); it != ::input::globalkey.end() )
+            if ( auto it = ::Input::globalkey.find( key ); it != ::Input::globalkey.end() )
                 if ( it->second( down ) ) {
                     ::Redraw( ::DrawType::Redo );
                     return -1;
@@ -73,22 +73,22 @@ void Keyboard( int c, ::LPARAM l ) {
             BLOCKCALL( key, WM_KEYBOARD, ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode );
         } else switch ( wParam ) {
             case WM_MOUSEMOVE: {
-                    ::input::mouse = ( ( ::MSLLHOOKSTRUCT* )lParam )->pt;
-                    ::input::mouse.x -= WINLEFT;
-                    ::input::mouse.y -= WINTOP;
+                    ::Input::mouse = ( ( ::MSLLHOOKSTRUCT* )lParam )->pt;
+                    ::Input::mouse.x -= WINLEFT;
+                    ::Input::mouse.y -= WINTOP;
 
                     over = {};
 
                     ::RECT cr;
-                    if ( !::input::passthrough && !::PauseDraw && ( !::GetClipCursor( &cr ) || cr.right > WINLEFT ) )
-                        if ( ::input::mouse.x > 0 && ::input::mouse.x < MIDPOINT && ::input::mouse.y > 0 && ::input::mouse.y < WINHEIGHT )
-                            for ( auto& i : ::input::clicks )
-                                if ( i.first.within( ::input::mouse ) ) {
+                    if ( !::Input::passthrough && !::PauseDraw && ( !::GetClipCursor( &cr ) || cr.right > WINLEFT ) )
+                        if ( ::Input::mouse.x > 0 && ::Input::mouse.x < MIDPOINT && ::Input::mouse.y > 0 && ::Input::mouse.y < WINHEIGHT )
+                            for ( auto& i : ::Input::clicks )
+                                if ( i.first.within( ::Input::mouse ) ) {
                                     over = i.first;
                                     break;
                                 }
 
-                    if ( ::input::hover != over )
+                    if ( ::Input::hover != over )
                         ::Message( WM_MOUSE, wParam, reinterpret_cast< ::WPARAM >( &over ) );
             }   break;
             case WM_LBUTTONDOWN:

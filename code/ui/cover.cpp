@@ -29,9 +29,9 @@ struct Cover : ::UI {
         ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
         if ( dt > ::DrawType::Normal || ::Saved::Playing != ::lastportrait ) {
-            ::rect rect { 0, WINHEIGHT - MIDPOINT, MIDPOINT };
+            ::Rect rect { 0, WINHEIGHT - MIDPOINT, MIDPOINT };
 
-            ::input::click c {
+            ::Input::Click c {
                 .lmb = []() { ::EnumNext( ::GridType ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
                 .rmb = []() { ::EnumNext( ::Saved::Playback ); },
                 .mmb = []() { ::EnumNext( ::Saved::Sorting ); ::Sort(); },
@@ -43,12 +43,12 @@ struct Cover : ::UI {
 
             if ( search )
                 c.key = []( int key ) {
-                    ::string::key( ::Searching, key );
+                    ::String::Key( ::Searching, key );
                     for ( auto& i : ::display ) {
                         int index = ::Index( ::Search, i );
                         bool find =
-                            ::string::supper( ::songs[ i ].title ).find( ::Searching ) != ::std::wstring::npos
-                            || ::string::supper( ::songs[ i ].artist ).find( ::Searching ) != ::std::wstring::npos;
+                            ::String::SUpper( ::songs[ i ].title ).find( ::Searching ) != ::std::wstring::npos
+                            || ::String::SUpper( ::songs[ i ].artist ).find( ::Searching ) != ::std::wstring::npos;
 
                         if ( index < 0 && find )
                             ::Search.push_back( i );
@@ -62,25 +62,25 @@ struct Cover : ::UI {
             ::DrawImage(
                 rect,
                 ::Playing.Cover,
-                ( ::DisplayInformation[ 0 ] && ::input::hover != rect ) ? 0.5f : 1.0f,
+                ( ::DisplayInformation[ 0 ] && ::Input::hover != rect ) ? 0.5f : 1.0f,
                 c
             );
 
-            if ( rect == ::input::hover ) {
+            if ( rect == ::Input::hover ) {
                 ::DisplayInformation[ 0 ] = []() { return ::songs[ ::Saved::Playing ].title; };
                 ::DisplayInformation[ 1 ] = []() { return ::songs[ ::Saved::Playing ].artist; };
                 ::DisplayInformation[ 2 ] = []() { return ::songs[ ::Saved::Playing ].encoding; };
-                ::DisplayInformation[ 3 ] = []() { return ::string::wconcat( ( int )::cursor, L"s / ", ::Playing.Duration, L"s" ); };
-                ::DisplayInformation[ 4 ] = []() { return ::string::wconcat( ::Playing.Size, L"mb" ); };
-                ::DisplayInformation[ 5 ] = []() { return ::string::wconcat( ::Playing.Bitrate, L"kbps" ); };
-                ::DisplayInformation[ 6 ] = []() { return ::string::wconcat( ::Playing.Samplerate, L"Hz" ); };
-                ::DisplayInformation[ 7 ] = []() { return ::string::wconcat( ::Saved::Volumes[ ::Saved::Playing ], L"%" ); };
-                ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::string::wconcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
-                ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 2 ] = []() { return ::string::wconcat( L"Sorting: ", ::STNames[ ::Saved::Sorting ] ); };
-                ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 1 ] = []() { return ::string::wconcat( L"Playback: ", ::PBNames[ ::Saved::Playback ] ); };
+                ::DisplayInformation[ 3 ] = []() { return ::String::WConcat( ( int )::cursor, L"s / ", ::Playing.Duration, L"s" ); };
+                ::DisplayInformation[ 4 ] = []() { return ::String::WConcat( ::Playing.Size, L"mb" ); };
+                ::DisplayInformation[ 5 ] = []() { return ::String::WConcat( ::Playing.Bitrate, L"kbps" ); };
+                ::DisplayInformation[ 6 ] = []() { return ::String::WConcat( ::Playing.Samplerate, L"Hz" ); };
+                ::DisplayInformation[ 7 ] = []() { return ::String::WConcat( ::Saved::Volumes[ ::Saved::Playing ], L"%" ); };
+                ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::String::WConcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
+                ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 2 ] = []() { return ::String::WConcat( L"Sorting: ", ::STNames[ ::Saved::Sorting ] ); };
+                ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 1 ] = []() { return ::String::WConcat( L"Playback: ", ::PBNames[ ::Saved::Playback ] ); };
 
                 if ( search )
-                    ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) / 2 ] = []() { return ::string::wconcat( L"Searching: ", ::Searching ); };
+                    ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) / 2 ] = []() { return ::String::WConcat( L"Searching: ", ::Searching ); };
             }
 
             if ( ::DisplayInformation[ 0 ] )

@@ -75,14 +75,14 @@ inline void Sort() {
             break;
         case ::SortTypes::Artist:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::string::slower( ::songs[ a ].artist ) == ::string::slower( ::songs[ b ].artist );
+                    return ::String::SLower( ::songs[ a ].artist ) == ::String::SLower( ::songs[ b ].artist );
                 } );
             break;
         case ::SortTypes::Title:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    int artist = ::string::slower( ::songs[ a ].artist ) == ::string::slower( ::songs[ b ].artist );
+                    int artist = ::String::SLower( ::songs[ a ].artist ) == ::String::SLower( ::songs[ b ].artist );
                     if ( artist == 0 )
-                        return ::string::slower( ::songs[ a ].title ) == ::string::slower( ::songs[ b ].title );
+                        return ::String::SLower( ::songs[ a ].title ) == ::String::SLower( ::songs[ b ].title );
                     return artist < 0;
                 } );
             break;

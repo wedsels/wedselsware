@@ -96,7 +96,7 @@ void WatchDirectory( const std::wstring& path, ::std::function< void( int, ::std
 
     THREAD( ::WatchDirectory( path, [ &dir ]( int action, ::std::wstring& name ) {
         ::std::function< void() > func = [ action, &name, &dir ]() {
-            ::std::wstring fpath = ::string::wconcat( dir.path, name );
+            ::std::wstring fpath = ::String::WConcat( dir.path, name );
 
             if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME ) {
                 if ( ::FileReady( fpath ) )

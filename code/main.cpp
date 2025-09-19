@@ -31,7 +31,7 @@ void Load() {
     ::Save();
 
     ::HANDLE hFile = ::CreateFileW(
-        ::string::wconcat(
+        ::String::WConcat(
             ::LineInfo::File.substr( ::LineInfo::File.find_last_of( '\\' ) + 1 ).c_str(),
             L" ",
             ::LineInfo::Func.c_str(),
@@ -150,7 +150,7 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     // HER( ::InitializeDirectory( L"E:/Webs/" ) );
     // HER( ::InitializeDirectory( L"E:/Apps/" ) );
-    HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, []( ::std::wstring p ) { ::Remove( ::string::hash( p ) ); } ) );
+    HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, []( ::std::wstring p ) { ::Remove( ::String::Hash( p ) ); } ) );
 
     HER( ::InitializeFont() );
     HER( ::InitGraphics() );

@@ -25,7 +25,7 @@ int lasttile = -1;
     }
 }
 
-::input::click GetClick( ::uint32_t entry ) {
+::Input::Click GetClick( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer:
             return {
@@ -37,14 +37,14 @@ int lasttile = -1;
                     ::uint32_t id = ::songs[ entry ].id;
                     int index = ::Index( ::Saved::Queue, id );
 
-                    if ( ::input::state::shift )
+                    if ( ::Input::State::shift )
                         ::queue::set( id, ::Index( ::Saved::Queue, id ) > -1 ? 0 : 1 );
                     else if ( ::GridType == ::GridTypes::Queue && index > -1 )
                         ::Saved::Queue.erase( ::Saved::Queue.begin() + index );
                     else
                         ::queue::add( id, 1 );
                 },
-                .rmb = [ entry ]() { ::execute( ::songs[ entry ].path, 1 ); },
+                .rmb = [ entry ]() { ::Execute( ::songs[ entry ].path, 1 ); },
                 .mmb = []() { ::queue::clear(); },
                 .xmb = []( int d ) { ::queue::next( d ); },
                 .scrl = []( int s ) { ::DisplayOffset += s; }
@@ -56,7 +56,7 @@ void GetDisplay( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer:
                 ::DisplayInformation[ 0 ] = [ entry ]() { return ::MixerEntries[ entry ].name; };
-                ::DisplayInformation[ 1 ] = [ entry ]() { return ::string::wconcat( ::Saved::Mixers[ entry ], L"%" ); };
+                ::DisplayInformation[ 1 ] = [ entry ]() { return ::String::WConcat( ::Saved::Mixers[ entry ], L"%" ); };
             break;
         default:
                 ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };
@@ -72,7 +72,7 @@ void DrawSlide() {
     ::std::vector< ::uint32_t >& Display = ::GetDisplay();
 
     float l = 1.0f;
-    ::rect r = {
+    ::Rect r = {
         0,
         ROWS * ( MINICOVER + SPACING ),
         MIDPOINT,
@@ -83,8 +83,8 @@ void DrawSlide() {
         r,
         COLORGHOST,
         l,
-        ::input::click{
-            .lmb = []() { ::DisplayOffset = ::std::max( ( int )::songs.size() - grid, grid ) * ( ::input::mouse.x / ( double )MIDPOINT ); },
+        ::Input::Click{
+            .lmb = []() { ::DisplayOffset = ::std::max( ( int )::songs.size() - grid, grid ) * ( ::Input::mouse.x / ( double )MIDPOINT ); },
             .rmb = []() { ::DisplayOffset = 0;  },
             .scrl = []( int s ) { ::DisplayOffset += s; }
         }
@@ -109,7 +109,7 @@ struct Grid : ::UI {
 
             for ( int i = 0; i < COLUMNS * ROWS; i++ ) {
                 int loc = i + ::DisplayOffset;
-                ::rect rect { ( MINICOVER + SPACING ) * ( i % COLUMNS ), ( MINICOVER + SPACING ) * ( i / COLUMNS ), MINICOVER };
+                ::Rect rect { ( MINICOVER + SPACING ) * ( i % COLUMNS ), ( MINICOVER + SPACING ) * ( i / COLUMNS ), MINICOVER };
 
                 if ( loc >= Display.size() ) {
                     float l = 1.0f;
@@ -123,7 +123,7 @@ struct Grid : ::UI {
                         ::GetChannels( Display[ loc ] )
                     );
 
-                if ( rect == ::input::hover )
+                if ( rect == ::Input::hover )
                     ::GetDisplay( Display[ loc ] );
             }
         }

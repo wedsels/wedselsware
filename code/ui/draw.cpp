@@ -1,14 +1,14 @@
 #include "ui.hpp"
 
-void CheckClick( ::rect r, float* light, ::std::optional< ::input::click > c ) {
+void CheckClick( ::Rect r, float* light, ::std::optional< ::Input::Click > c ) {
     if ( c ) {
-        ::input::click::create( r, *c );
-        if ( light && ::input::hover == r )
+        ::Input::Click::create( r, *c );
+        if ( light && ::Input::hover == r )
             *light *= 0.5f;
-    } else ::input::clicks.erase( r );
+    } else ::Input::clicks.erase( r );
 }
 
-void DrawBox( ::rect t, ::uint32_t b, float& light, ::std::optional< ::input::click > c ) {
+void DrawBox( ::Rect t, ::uint32_t b, float& light, ::std::optional< ::Input::Click > c ) {
     int width = t.r - t.l;
     int height = t.b - t.t;
 
@@ -26,7 +26,7 @@ void DrawBox( ::rect t, ::uint32_t b, float& light, ::std::optional< ::input::cl
         }
 }
 
-void DrawImage( ::rect r, ::uint8_t* img, float light, ::std::optional< ::input::click > c, ::uint8_t channels ) {
+void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< ::Input::Click > c, ::uint8_t channels ) {
     int size = r.r - r.l;
 
     ::CheckClick( r, &light, c );
@@ -49,7 +49,7 @@ void DrawImage( ::rect r, ::uint8_t* img, float light, ::std::optional< ::input:
         }
 }
 
-void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< ::input::click > c ) {
+void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c ) {
     int tw = ::TextWidth( s );
     if ( tw <= width )
         ox += ( width - tw ) / 2;

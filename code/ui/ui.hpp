@@ -48,10 +48,10 @@ extern int TextWidth( ::std::wstring& text );
 extern void DrawCursor();
 
 extern void Draw( ::DrawType dt );
-extern void DrawBox( ::rect t, ::uint32_t b, float& light, ::std::optional< ::input::click > c = {} );
-extern void DrawImage( ::rect r, ::uint8_t* img, float light, ::std::optional< ::input::click > c = {}, ::uint8_t channels = 3 );
-extern void DrawString( int x, int y, int width, ::std::wstring& s, ::std::optional< ::input::click > c = {} );
-extern void CheckClick( ::rect r, float* light, ::std::optional< ::input::click > c );
+extern void DrawBox( ::Rect t, ::uint32_t b, float& light, ::std::optional< ::Input::Click > c = {} );
+extern void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< ::Input::Click > c = {}, ::uint8_t channels = 3 );
+extern void DrawString( int x, int y, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c = {} );
+extern void CheckClick( ::Rect r, float* light, ::std::optional< ::Input::Click > c );
 
 inline ::uint32_t BGRA( ::uint8_t r, ::uint8_t g, ::uint8_t b, ::uint8_t a = 255, float light = 1.0f ) {
     float alpha = a / 255.0f;

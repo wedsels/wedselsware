@@ -20,7 +20,7 @@
 
 #define LINEINFO do { ::LineInfo::Line = __LINE__; ::LineInfo::File = __FILE__; ::LineInfo::Func = __func__; } while ( 0 )
 #define HR( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
-#define HER( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) { ::box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
+#define HER( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
 #define THREAD( body ) do { ::std::thread( [ & ] { LINEINFO; body } ).detach(); } while ( 0 )
 
 #define WM_QUEUENEXT ( WM_USER + 1 )
@@ -59,15 +59,15 @@ namespace LineInfo {
     inline ::std::string Func;
 }
 
-namespace string {
+namespace String {
     template< typename... Args >
-    inline ::std::wstring wconcat( Args&&... args ) {
+    inline ::std::wstring WConcat( Args&&... args ) {
         ::std::wstringstream wss;
         ( wss << ... << args );
         return wss.str();
     }
 
-    inline void key( ::std::wstring& str, ::DWORD key ) {
+    inline void Key( ::std::wstring& str, ::DWORD key ) {
         switch ( key ) {
             case VK_BACK: if ( str.size() > 0 ) str.pop_back(); break;
             case VK_SPACE: str += L" "; break;
@@ -77,7 +77,7 @@ namespace string {
     }
 
     template< typename str >
-    inline ::uint32_t hash( str& s ) {
+    inline ::uint32_t Hash( str& s ) {
         ::uint32_t hash = 2166136261u;
 
         auto ps = s.c_str();
@@ -90,30 +90,30 @@ namespace string {
         return hash;
     }
 
-    ::std::wstring slower( ::std::wstring& string );
-    ::std::wstring supper( ::std::wstring& string );
-    ::std::string clower( char* str );
-    ::std::string cupper( char* str );
-    ::std::string wideutf8( const ::std::wstring& str );
-    ::std::string wideansii( const ::std::wstring& str );
-    ::std::wstring utf8wide( const ::std::string& str );
+    ::std::wstring SLower( ::std::wstring& string );
+    ::std::wstring SUpper( ::std::wstring& string );
+    ::std::string CLower( char* str );
+    ::std::string CUpper( char* str );
+    ::std::string WideUtf8( const ::std::wstring& str );
+    ::std::string WideAnsii( const ::std::wstring& str );
+    ::std::wstring Utf8Wide( const ::std::string& str );
 };
 
 template < typename... T >
-inline void box( T... text ) {
+inline void Box( T... text ) {
     ::std::wstringstream wss;
     ( wss << ... << text );
     ::MessageBoxW( NULL, wss.str().c_str(), L"", MB_OK );
 }
 
-inline void execute( ::std::wstring str, int type = 0 ) {
+inline void Execute( ::std::wstring str, int type = 0 ) {
     for ( auto& i : str )
         if ( i == '/' )
             i = '\\';
 
     switch ( type ) {
-        case 0: str = ::string::wconcat( L"explorer.exe \"", str, L"\"" ); break;
-        case 1: str = ::string::wconcat( L"explorer.exe /select,\"", str, L"\"" ); break;
+        case 0: str = ::String::WConcat( L"explorer.exe \"", str, L"\"" ); break;
+        case 1: str = ::String::WConcat( L"explorer.exe /select,\"", str, L"\"" ); break;
         case 2: break;
     }
 
@@ -150,19 +150,19 @@ inline void Message( ::UINT wm, ::WPARAM wParam, ::LPARAM lParam ) {
 template < typename T >
 inline void EnumNext( T& e ) { e = ( T )( ( ( int )e + 1 ) % ( int )T::Count ); }
 
-struct rect {
+struct Rect {
     int l, t, r, b;
 
-    rect() { l = t = r = b = 0; }
+    Rect() { l = t = r = b = 0; }
     
-    rect( int left, int top, int right, int bottom ) {
+    Rect( int left, int top, int right, int bottom ) {
         l = left;
         t = top;
         r = right;
         b = bottom;
     }
     
-    rect( int left, int top, int size ) {
+    Rect( int left, int top, int size ) {
         l = left;
         t = top;
         r = left + size;
@@ -173,18 +173,18 @@ struct rect {
     int height() const { return b - t; }
     bool empty() const { return t == b || l == r; }
     bool within( ::POINT p ) const { return p.x >= l && p.x <= r && p.y >= t && p.y <= b; }
-    bool operator==( const ::rect& c ) const { return l == c.l && t == c.t && r == c.r && b == c.b; }
+    bool operator==( const ::Rect& c ) const { return l == c.l && t == c.t && r == c.r && b == c.b; }
     ::POINT topleft() const { return { l, t }; }
     ::POINT topright() const { return { r, t }; }
     ::POINT bottomleft() const { return { l, b }; }
     ::POINT bottomright() const { return { r, b }; }
-    ::std::wstring bounds() const { return ::string::wconcat( l, " : ", t, " : ", r, " : ", b ); }
+    ::std::wstring bounds() const { return ::String::WConcat( l, " : ", t, " : ", r, " : ", b ); }
 };
 
 namespace std {
     template <>
-    struct hash< ::rect > {
-        ::size_t operator()( const ::rect& r ) const {
+    struct hash< ::Rect > {
+        ::size_t operator()( const ::Rect& r ) const {
             ::size_t h1 = hash< int >{}( r.l );
             ::size_t h2 = hash< int >{}( r.t );
             ::size_t h3 = hash< int >{}( r.r );
@@ -197,12 +197,12 @@ namespace std {
 
 enum struct DrawType { None, Normal, Redo };
 
-namespace input {
-    inline ::rect hover;
+namespace Input {
+    inline ::Rect hover;
 
     inline bool passthrough;
 
-    namespace state {
+    namespace State {
         inline bool lmb;
         inline bool rmb;
         inline bool mmb;
@@ -213,12 +213,12 @@ namespace input {
 
     inline ::POINT mouse;
 
-    struct click;
-    inline ::std::unordered_map< ::rect, ::input::click > clicks;
+    struct Click;
+    inline ::std::unordered_map< ::Rect, ::Input::Click > clicks;
 
     extern ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey;
 
-    struct click {
+    struct Click {
         ::DrawType intensity = ::DrawType::Redo;
 
         ::std::function< void() > hvr;
@@ -229,6 +229,6 @@ namespace input {
         ::std::function< void( int ) > scrl;
         ::std::function< void( ::DWORD ) > key;
 
-        static void create( ::rect& rect, click& c ) { clicks[ rect ] = ::std::move( c ); }
+        static void create( ::Rect& rect, Click& c ) { clicks[ rect ] = ::std::move( c ); }
     };
 };

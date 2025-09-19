@@ -1,16 +1,16 @@
 #include "common.hpp"
 
-::std::wstring string::supper( ::std::wstring& string ) {
+::std::wstring String::SUpper( ::std::wstring& string ) {
     ::std::transform( string.begin(), string.end(), string.begin(), ::toupper );
     return string;
 }
 
-::std::wstring string::slower( ::std::wstring& string ) {
+::std::wstring String::SLower( ::std::wstring& string ) {
     ::std::transform( string.begin(), string.end(), string.begin(), ::towlower );
     return string;
 }
 
-::std::string string::clower( char str[] ) {
+::std::string String::CLower( char str[] ) {
     ::std::string string;
 
     for ( size_t i = 0; str[ i ] != '\0'; ++i )
@@ -19,7 +19,7 @@
     return string;
 }
 
-::std::string string::cupper( char str[] ) {
+::std::string String::CUpper( char str[] ) {
     ::std::string string;
 
     for ( size_t i = 0; str[ i ] != '\0'; ++i )
@@ -28,7 +28,7 @@
     return string;
 }
 
-::std::string string::wideutf8( const ::std::wstring& str ) {
+::std::string String::WideUtf8( const ::std::wstring& str ) {
     if ( str.empty() )
         return ::std::string();
 
@@ -41,7 +41,7 @@
     return utf8;
 }
 
-::std::string string::wideansii( const ::std::wstring& str ) {
+::std::string String::WideAnsii( const ::std::wstring& str ) {
     if ( str.empty() )
         return ::std::string();
 
@@ -54,7 +54,7 @@
     return ansii;
 }
 
-::std::wstring string::utf8wide( const ::std::string& str ) {
+::std::wstring String::Utf8Wide( const ::std::string& str ) {
     if ( str.empty() )
         return ::std::wstring();
 

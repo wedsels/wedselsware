@@ -28,7 +28,7 @@
 
 void ArchiveSong( ::std::wstring path ) {
     ::media media = {};
-    media.id = ::string::hash( path );
+    media.id = ::String::Hash( path );
     media.path = path;
     media.encoding = path.substr( path.rfind( L'.' ) + 1 );
 
@@ -54,9 +54,9 @@ void ArchiveSong( ::std::wstring path ) {
     ::AVDictionaryEntry* tag = nullptr;
     while ( ( tag = ::av_dict_get( metadata, "", tag, AV_DICT_IGNORE_SUFFIX ) ) )
         if ( ::_stricmp( tag->key, "ARTIST" ) == 0 )
-            artist = ::string::utf8wide( tag->value );
+            artist = ::String::Utf8Wide( tag->value );
         else if ( ::_stricmp( tag->key, "TITLE" ) == 0 )
-            title = ::string::utf8wide( tag->value );
+            title = ::String::Utf8Wide( tag->value );
 
     for ( auto& i : artist )
         if ( i == L'\\' ) continue;
@@ -84,7 +84,7 @@ void ArchiveSong( ::std::wstring path ) {
 }
 
 ::HRESULT FFMPEG( ::std::wstring path, ::Play& Playing ) {
-    HR( ::avformat_open_input( &Playing.Format, ::string::wideutf8( path ).c_str(), 0, 0 ) );
+    HR( ::avformat_open_input( &Playing.Format, ::String::WideUtf8( path ).c_str(), 0, 0 ) );
     HR( ::avformat_find_stream_info( Playing.Format, 0 ) );
 
     for ( unsigned int i = 0; i < Playing.Format->nb_streams; i++ ) {

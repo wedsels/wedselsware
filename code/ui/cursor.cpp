@@ -1,7 +1,7 @@
 #include "../audio/audio.hpp"
 
 void DrawCursor() {
-    ::rect r = {
+    ::Rect r = {
         0,
         WINHEIGHT - MIDPOINT - SPACING * 3,
         MIDPOINT,
@@ -13,8 +13,8 @@ void DrawCursor() {
         r,
         COLORGHOST,
         l,
-        ::input::click{
-            .lmb = []() { ::Seek( ::Playing.Duration * ( ::input::mouse.x / ( double )MIDPOINT ) ); },
+        ::Input::Click{
+            .lmb = []() { ::Seek( ::Playing.Duration * ( ::Input::mouse.x / ( double )MIDPOINT ) ); },
             .rmb = []() { ::Seek( 0 ); },
             .scrl = []( int s ) { ::Seek( ::cursor - s ); }
         }

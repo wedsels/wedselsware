@@ -65,7 +65,7 @@ void SetMixers() {
                         name = name.substr( name.find_last_of( '\\' ) + 1 );
                         name = name.substr( 0, name.find( '.' ) );
 
-                        ::uint32_t id = ::string::hash( name );
+                        ::uint32_t id = ::String::Hash( name );
 
                         if ( !::Saved::Mixers.contains( id ) )
                             ::Saved::Mixers[ id ] = 0.45;
