@@ -150,7 +150,7 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     // HER( ::InitializeDirectory( L"E:/Webs/" ) );
     // HER( ::InitializeDirectory( L"E:/Apps/" ) );
-    HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, []( ::std::wstring p ) { ::Remove( ::String::Hash( p ) ); } ) );
+    HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, ::Remove ) );
 
     HER( ::InitializeFont() );
     HER( ::InitGraphics() );

@@ -1,9 +1,9 @@
 #include "audio/audio.hpp"
 
 struct Directory {
-    ::std::wstring path;
-    ::std::function< void( ::std::wstring ) > add;
-    ::std::function< void( ::std::wstring ) > remove;
+    const wchar_t* path;
+    ::std::function< void( const wchar_t* ) > add;
+    ::std::function< void( ::uint32_t ) > remove;
     mutable ::std::filesystem::directory_iterator it;
 };
 
@@ -21,7 +21,7 @@ void UpdateDirectories( ::MSG& msg ) {
     for ( auto& dir : Directories ) {
         while ( !( all = dir.it == EndIt ) && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
             if ( dir.it->is_regular_file() && !dir.it->is_symlink() )
-                dir.add( dir.it->path().wstring() );
+                dir.add( dir.it->path().wstring().c_str() );
 
             ++dir.it;
         }
@@ -33,7 +33,7 @@ void UpdateDirectories( ::MSG& msg ) {
         ::std::vector< Directory >().swap( Directories );
 }
 
-bool FileReady( const std::wstring& p ) {
+bool FileReady( const wchar_t* p ) {
     for ( int i = 0; i < 5; ++i )
         if ( ::std::ifstream( p, ::std::ios::binary ).good() )
             return true;
@@ -43,9 +43,9 @@ bool FileReady( const std::wstring& p ) {
     return false;
 }
 
-void WatchDirectory( const std::wstring& path, ::std::function< void( int, ::std::wstring& ) > action ) {
+void WatchDirectory( const wchar_t* path, ::std::function< void( int, const wchar_t* ) > action ) {
     ::HANDLE hDir = ::CreateFileW(
-        path.c_str(),
+        path,
         FILE_LIST_DIRECTORY,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
@@ -71,14 +71,16 @@ void WatchDirectory( const std::wstring& path, ::std::function< void( int, ::std
             NULL,
             NULL
         ) ) {
-            ::FILE_NOTIFY_INFORMATION* fni = reinterpret_cast< ::FILE_NOTIFY_INFORMATION* >( buffer );
+            ::DWORD offset = 0;
+
             do {
-                ::std::wstring fileName( fni->FileName, fni->FileNameLength / sizeof( ::WCHAR ) );
-                action( fni->Action, fileName );
+                ::FILE_NOTIFY_INFORMATION* fni = reinterpret_cast< ::FILE_NOTIFY_INFORMATION* >( buffer + offset );
+                action( fni->Action, fni->FileName );
 
                 if ( fni->NextEntryOffset == 0 )
                     break;
-                fni = reinterpret_cast< ::FILE_NOTIFY_INFORMATION* >( reinterpret_cast< ::BYTE* >( fni ) + fni->NextEntryOffset );
+
+                offset += fni->NextEntryOffset;
             } while ( true );
         }
     }
@@ -86,27 +88,27 @@ void WatchDirectory( const std::wstring& path, ::std::function< void( int, ::std
     ::CloseHandle( hDir );
 }
 
-::HRESULT InitializeDirectory( ::std::wstring path, ::std::function< void( ::std::wstring ) > add, ::std::function< void( ::std::wstring ) > remove ) {
-    ::Directory dir;
-    dir.path = path;
-    dir.add = add;
-    dir.remove = remove;
-    dir.it = ::std::filesystem::directory_iterator( path );
+::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
+    ::Directory dir = { path, add, remove, ::std::filesystem::directory_iterator( path ) };
     Directories.push_back( dir );
 
-    THREAD( ::WatchDirectory( path, [ &dir ]( int action, ::std::wstring& name ) {
-        ::std::function< void() > func = [ action, &name, &dir ]() {
-            ::std::wstring fpath = ::String::WConcat( dir.path, name );
+    THREAD(
+        ::Directory dir = Directories.back();
 
-            if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME ) {
-                if ( ::FileReady( fpath ) )
-                    dir.add( fpath );
-            } else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME )
-                dir.remove( fpath );
-        };
+        ::WatchDirectory( dir.path, [ &dir ]( int action, const wchar_t* name ) {
+            ::std::function< void() > func = [ &action, &name, &dir ]() {
+                ::std::wstring fpath = ::String::WConcat( dir.path, name );
 
-        ::SendMessageW( hwnd, WM_ACTION, ( ::WPARAM )&func, 0 );
-    } ); );
+                if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME ) {
+                    if ( ::FileReady( fpath.c_str() ) )
+                        dir.add( fpath.c_str() );
+                } else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME )
+                    dir.remove( ::String::Hash( fpath ) );
+            };
+
+            ::SendMessageW( hwnd, WM_ACTION, ( ::WPARAM )&func, 0 );
+        } );
+    );
 
     return S_OK;
 }

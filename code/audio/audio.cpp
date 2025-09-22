@@ -83,7 +83,7 @@ void ArchiveSong( ::std::wstring path ) {
     ::Draw( ::DrawType::Redo );
 }
 
-::HRESULT FFMPEG( ::std::wstring path, ::Play& Playing ) {
+::HRESULT FFMPEG( ::std::wstring& path, ::Play& Playing ) {
     HR( ::avformat_open_input( &Playing.Format, ::String::WideUtf8( path ).c_str(), 0, 0 ) );
     HR( ::avformat_find_stream_info( Playing.Format, 0 ) );
 

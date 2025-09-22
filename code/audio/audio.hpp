@@ -139,7 +139,7 @@ extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecou
 extern void SetVolume( double v = 0.0 );
 extern void ArchiveSong( ::std::wstring path );
 extern ::HRESULT SetSong( ::uint32_t song );
-extern ::HRESULT FFMPEG( ::std::wstring path, ::Play& Playing );
+extern ::HRESULT FFMPEG( ::std::wstring& path, ::Play& Playing );
 extern ::HRESULT SetDefaultDevice();
 
 namespace queue {

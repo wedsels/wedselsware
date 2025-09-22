@@ -40,7 +40,7 @@
 
 inline ::HWND hwnd;
 
-extern ::HRESULT InitializeDirectory( ::std::wstring path, ::std::function< void( ::std::wstring ) > add, ::std::function< void( ::std::wstring ) > remove );
+extern ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
 extern ::HRESULT InitializeMixer();
 extern ::HRESULT InitializeFont();
 extern ::HRESULT InitGraphics();
@@ -120,8 +120,8 @@ inline void Execute( ::std::wstring str, int type = 0 ) {
     ::PROCESS_INFORMATION pi = { 0 };
     ::STARTUPINFOW si = { 0 };
     si.cb = sizeof( si );
-    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
-    si.wShowWindow = SW_SHOW;
+    ::SetForegroundWindow( hwnd );
+    ::SetFocus( hwnd );
     ::CreateProcessW( NULL, ( ::LPWSTR )str.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi );
 }
 
@@ -136,7 +136,7 @@ inline int Index( ::std::vector< T >& list, const T& item  ) {
 
 inline int RNG() {
     static ::std::mt19937 seed( ::std::random_device{}() );
-    static ::std::uniform_int_distribution<> distribution( 0, INT_MAX );
+    static ::std::uniform_int_distribution distribution( 0, INT_MAX );
 
     return distribution( seed );
 }
@@ -214,7 +214,7 @@ namespace Input {
     inline ::POINT mouse;
 
     struct Click;
-    inline ::std::unordered_map< ::Rect, ::Input::Click > clicks;
+    inline ::std::unordered_map< ::Rect, Click > clicks;
 
     extern ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey;
 
@@ -231,4 +231,4 @@ namespace Input {
 
         static void create( ::Rect& rect, Click& c ) { clicks[ rect ] = ::std::move( c ); }
     };
-};
+};  
