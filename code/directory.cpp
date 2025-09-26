@@ -75,7 +75,8 @@ void WatchDirectory( const wchar_t* path, ::std::function< void( int, const wcha
 
             do {
                 ::FILE_NOTIFY_INFORMATION* fni = reinterpret_cast< ::FILE_NOTIFY_INFORMATION* >( buffer + offset );
-                action( fni->Action, fni->FileName );
+                ::std::wstring name( fni->FileName, fni->FileNameLength / sizeof( ::WCHAR ) );
+                action( fni->Action, name.c_str() );
 
                 if ( fni->NextEntryOffset == 0 )
                     break;
@@ -93,10 +94,8 @@ void WatchDirectory( const wchar_t* path, ::std::function< void( int, const wcha
     Directories.push_back( dir );
 
     THREAD(
-        ::Directory dir = Directories.back();
-
-        ::WatchDirectory( dir.path, [ &dir ]( int action, const wchar_t* name ) {
-            ::std::function< void() > func = [ &action, &name, &dir ]() {
+        ::WatchDirectory( dir.path, [ = ]( int action, const wchar_t* name ) {
+            ::std::function< void() > func = [ = ]() {
                 ::std::wstring fpath = ::String::WConcat( dir.path, name );
 
                 if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME ) {

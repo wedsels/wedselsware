@@ -21,7 +21,7 @@
 #define LINEINFO do { ::LineInfo::Line = __LINE__; ::LineInfo::File = __FILE__; ::LineInfo::Func = __func__; } while ( 0 )
 #define HR( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
 #define HER( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
-#define THREAD( body ) do { ::std::thread( [ & ] { LINEINFO; body } ).detach(); } while ( 0 )
+#define THREAD( body ) do { ::std::thread( [ = ] { LINEINFO; body } ).detach(); } while ( 0 )
 
 #define WM_QUEUENEXT ( WM_USER + 1 )
 #define WM_KEYBOARD ( WM_USER + 2 )
