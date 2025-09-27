@@ -44,7 +44,7 @@ int TextWidth( ::std::wstring& text ) {
 }
 
 ::HRESULT InitializeFont() {
-    ::std::ifstream file( "PixelCode-ExtraLight-Italic.ttf", ::std::ios::binary | ::std::ios::ate );
+    ::std::ifstream file( "onryou.ttf", ::std::ios::binary | ::std::ios::ate );
     if ( !file )
         return S_FALSE;
 

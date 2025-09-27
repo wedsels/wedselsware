@@ -30,3 +30,30 @@ target_link_libraries( wedselsware PRIVATE libfftw3-3 avformat avcodec avutil sw
 target_compile_options( wedselsware PRIVATE /GL /GS- /Gy /Zc:inline )
 set_target_properties( wedselsware PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE )
 target_link_options( wedselsware PRIVATE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO )
+
+set(
+    COPY_FILES
+    ${CMAKE_SOURCE_DIR}/ffmpeg/bin/avcodec-61.dll
+    ${CMAKE_SOURCE_DIR}/ffmpeg/bin/avformat-61.dll
+    ${CMAKE_SOURCE_DIR}/ffmpeg/bin/avutil-59.dll
+    ${CMAKE_SOURCE_DIR}/ffmpeg/bin/swresample-5.dll
+    ${CMAKE_SOURCE_DIR}/fftw/libfftw3-3.dll
+    ${CMAKE_SOURCE_DIR}/font/onryou.ttf
+)
+
+set( DEST_FILES "" )
+foreach( SRC ${COPY_FILES} )
+    get_filename_component( FILENAME ${SRC} NAME )
+    set( DST ${CMAKE_BINARY_DIR}/Release/${FILENAME} )
+
+    add_custom_command(
+        OUTPUT ${DST}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SRC} ${DST}
+        DEPENDS ${SRC}
+        COMMENT "Copying ${FILENAME}"
+    )
+
+    list( APPEND DEST_FILES ${DST} )
+endforeach()
+
+add_custom_target( copy ALL DEPENDS ${DEST_FILES} )

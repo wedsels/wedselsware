@@ -4,7 +4,7 @@
 #define SPACING 3
 #define COLUMNS 9
 #define ROWS 12
-#define FONTHEIGHT 22
+#define FONTHEIGHT 24
 #define FONTSPACE ( FONTHEIGHT / 3 )
 
 #define COLORALPHA 0x00000000
@@ -28,7 +28,7 @@ inline ::std::vector< ::uint32_t > Search;
 inline ::std::atomic< bool > PauseDraw = true;
 
 enum struct GridTypes { Songs, Queue, Search, Mixer, Count };
-inline GridTypes GridType = ::GridTypes::Songs;
+inline ::GridTypes GridType = ::GridTypes::Songs;
 inline int DisplayOffset = 0;
 inline ::std::function< ::std::wstring() > DisplayInformation[ MIDPOINT / ( FONTHEIGHT + SPACING ) ];
 extern ::std::vector< ::uint32_t >& GetDisplay();
