@@ -27,9 +27,9 @@
 #define WM_KEYBOARD ( WM_USER + 2 )
 #define WM_REDRAW ( WM_USER + 3 )
 #define WM_ACTION ( WM_USER + 4 )
-#define WM_MIXER ( WM_USER + 5 )
-#define WM_MOUSE ( WM_USER + 6 )
-#define WM_SONG ( WM_USER + 7 )
+#define WM_DEVICE ( WM_USER + 5 )
+#define WM_MIXER ( WM_USER + 6 )
+#define WM_MOUSE ( WM_USER + 7 )
 
 #define WINLEFT 3440
 #define WINTOP 5

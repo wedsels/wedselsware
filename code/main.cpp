@@ -97,6 +97,9 @@ void Load() {
         case WM_ACTION:
                 ( *( ::std::function< void() >* )( wParam ) )();
             return NULL;
+        case WM_DEVICE:
+                ::SetDefaultDevice();
+            return NULL;
         default:
             return ::DefWindowProcA( hwnd, msg, wParam, lParam );
     }

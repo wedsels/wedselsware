@@ -3,7 +3,7 @@
 
 #define ESAFECALL( type ) do { if ( ::Input::clicks[ over ].type ) ::Input::clicks[ over ].type(); } while ( 0 )
 #define ISAFECALL( type, i ) do { if ( ::Input::clicks[ over ].type ) ::Input::clicks[ over ].type( i ); } while ( 0 )
-#define BLOCKCALL( type, msg, lparam ) do { if ( ::Input::clicks[ over ].type ) { ::Message( msg, wParam, lparam ); return -1; } } while ( 0 )
+#define BLOCKCALL( type, msg, lparam ) do { if ( !Passthrough && ::Input::clicks[ over ].type ) { ::Message( msg, wParam, lparam ); return -1; } } while ( 0 )
 
 ::Rect over = {};
 
@@ -52,12 +52,18 @@ void Keyboard( int c, ::LPARAM l ) {
 }
 
 ::LRESULT CALLBACK InputProc( int nCode, ::WPARAM wParam, ::LPARAM lParam ) {
-    static bool SkipInsert, SkipEnd;
+    static bool SkipInsert, SkipEnd, Passthrough;
 
     if ( nCode == HC_ACTION && ~nCode < 0 ) {
         if ( wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP ) {
             ::DWORD key = ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode;
             bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
+
+            if ( key == VK_NEXT ) {
+                if ( down )
+                    Passthrough = !Passthrough;
+                return -1;
+            }
 
             if ( down && key == VK_INSERT && ( SkipInsert = !SkipInsert ) )
                 return -1;
