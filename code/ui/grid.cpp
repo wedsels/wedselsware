@@ -7,6 +7,8 @@ int lasttile = -1;
         case ::GridTypes::Queue: return ::Saved::Queue;
         case ::GridTypes::Search: return ::Search;
         case ::GridTypes::Mixer: return ::MixersActive;
+        case ::GridTypes::Apps: return ::Apps;
+        case ::GridTypes::Webs: return ::Webs;
         default: return ::display;
     }
 }
@@ -21,6 +23,8 @@ int lasttile = -1;
 ::uint8_t* GetCover( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer: return ::MixerEntries[ entry ].minicover;
+        case ::GridTypes::Apps: return nullptr;
+        case ::GridTypes::Webs: return nullptr;
         default: return ::songs[ entry ].minicover;
     }
 }
@@ -31,6 +35,8 @@ int lasttile = -1;
             return {
                 .scrl = [ entry ]( int dir ) { ::SetMixerVolume( entry, dir * -0.01 ); }
             };
+        case ::GridTypes::Apps: return { .lmb = [ entry ]() { ::Execute( ::AppsPath[ entry ] ); } };
+        case ::GridTypes::Webs: return { .lmb = [ entry ]() { ::Execute( ::WebsPath[ entry ] ); } };
         default:
             return {
                 .lmb = [ entry ]() {
@@ -57,6 +63,12 @@ void GetDisplay( ::uint32_t entry ) {
         case ::GridTypes::Mixer:
                 ::DisplayInformation[ 0 ] = [ entry ]() { return ::MixerEntries[ entry ].name; };
                 ::DisplayInformation[ 1 ] = [ entry ]() { return ::String::WConcat( ::Saved::Mixers[ entry ], L"%" ); };
+            break;
+        case ::GridTypes::Apps:
+                ::DisplayInformation[ 0 ] = [ entry ]() { return ::AppsPath[ entry ]; };
+            break;
+        case ::GridTypes::Webs:
+                ::DisplayInformation[ 0 ] = [ entry ]() { return ::WebsPath[ entry ]; };
             break;
         default:
                 ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };

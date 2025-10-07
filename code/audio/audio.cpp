@@ -17,6 +17,7 @@
     }
     ::Saved::Playing = s.id;
     ::SetVolume();
+    ::swr_inject_silence( ::Playing.SWR, ::Device.sampleRate / 100 * 2 );
 
     ::cursor = 0;
     ::Redraw( ::DrawType::Redo );

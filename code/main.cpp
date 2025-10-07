@@ -51,8 +51,8 @@ void Load() {
 
     ::MINIDUMP_EXCEPTION_INFORMATION mdei;
     mdei.ThreadId = ::GetCurrentThreadId();
-    mdei.ExceptionPointers = exceptionInfo;
     mdei.ClientPointers = FALSE;
+    mdei.ExceptionPointers = exceptionInfo;
 
     ::MiniDumpWriteDump( ::GetCurrentProcess(), ::GetCurrentProcessId(), hFile, ::MiniDumpNormal, &mdei, NULL, NULL );
 
@@ -151,8 +151,8 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     ::hwnd = ::Window( hInstance );
 
-    // HER( ::InitializeDirectory( L"E:/Webs/" ) );
-    // HER( ::InitializeDirectory( L"E:/Apps/" ) );
+    HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::uint32_t id = ::String::Hash( p ); ::Apps.push_back( id ); ::AppsPath.emplace( id, p ); }, []( ::uint32_t id ) { ::Apps.erase( ::Apps.begin() + ::Index( ::Apps, id ) ); ::AppsPath.erase( id ); } ) );
+    HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::uint32_t id = ::String::Hash( p ); ::Webs.push_back( id ); ::WebsPath.emplace( id, p ); }, []( ::uint32_t id ) { ::Webs.erase( ::Webs.begin() + ::Index( ::Webs, id ) ); ::WebsPath.erase( id ); } ) );
     HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, ::Remove ) );
 
     HER( ::InitializeFont() );

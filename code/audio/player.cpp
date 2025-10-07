@@ -152,6 +152,7 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
                     ::Message( WM_QUEUENEXT, 0, 0 );
                 return;
             default:
+                    ::swr_inject_silence( ::Playing.SWR, frames * 2 );
                 return;
         }
 

@@ -148,7 +148,7 @@ inline void Message( ::UINT wm, ::WPARAM wParam, ::LPARAM lParam ) {
 }
 
 template < typename T >
-inline void EnumNext( T& e ) { e = ( T )( ( ( int )e + 1 ) % ( int )T::Count ); }
+inline void EnumNext( T& e, bool b = false ) { e = ( T )( ( ( int )e - ( ( int )b * 2 - 1 ) + ( int )T::Count ) % ( int )T::Count ); }
 
 struct Rect {
     int l, t, r, b;

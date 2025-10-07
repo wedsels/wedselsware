@@ -25,9 +25,14 @@ inline ::std::atomic< ::uint32_t > Canvas[ WINWIDTH * WINHEIGHT ];
 inline ::std::wstring Searching;
 inline ::std::vector< ::uint32_t > Search;
 
+inline ::std::vector< ::uint32_t > Apps;
+inline ::std::map< ::uint32_t, ::std::wstring > AppsPath;
+inline ::std::vector< ::uint32_t > Webs;
+inline ::std::map< ::uint32_t, ::std::wstring > WebsPath;
+
 inline ::std::atomic< bool > PauseDraw = true;
 
-enum struct GridTypes { Songs, Queue, Search, Mixer, Count };
+enum struct GridTypes { Songs, Queue, Search, Mixer, Apps, Webs, Count };
 inline ::GridTypes GridType = ::GridTypes::Songs;
 inline int DisplayOffset = 0;
 inline ::std::function< ::std::wstring() > DisplayInformation[ MIDPOINT / ( FONTHEIGHT + SPACING ) ];

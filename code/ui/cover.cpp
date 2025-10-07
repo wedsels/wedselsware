@@ -6,7 +6,9 @@ int lastportrait = -1;
     { ::GridTypes::Queue, L"Queue" },
     { ::GridTypes::Songs, L"Songs" },
     { ::GridTypes::Search, L"Search" },
-    { ::GridTypes::Mixer, L"Mixer" }
+    { ::GridTypes::Mixer, L"Mixer" },
+    { ::GridTypes::Apps, L"Apps" },
+    { ::GridTypes::Webs, L"Webs" }
 };
 
 ::std::unordered_map< ::Playback, ::std::wstring > PBNames = {
@@ -32,9 +34,9 @@ struct Cover : ::UI {
             ::Rect rect { 0, WINHEIGHT - MIDPOINT, MIDPOINT };
 
             ::Input::Click c {
-                .lmb = []() { ::EnumNext( ::GridType ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
-                .rmb = []() { ::EnumNext( ::Saved::Playback ); },
-                .mmb = []() { ::EnumNext( ::Saved::Sorting ); ::Sort(); },
+                .lmb = []() { ::EnumNext( ::GridType, ::Input::State::shift ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
+                .rmb = []() { ::EnumNext( ::Saved::Playback, ::Input::State::shift ); },
+                .mmb = []() { ::EnumNext( ::Saved::Sorting, ::Input::State::shift ); ::Sort(); },
                 .xmb = []( int d ) { ::queue::next( d ); },
                 .scrl = []( int s ) { ::SetVolume( s * -0.001 ); }
             };
