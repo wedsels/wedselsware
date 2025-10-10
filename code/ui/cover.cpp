@@ -45,8 +45,10 @@ struct Cover : ::UI {
 
             if ( search )
                 c.key = []( int key ) {
-                    ::String::Key( ::Searching, key );
-                    for ( auto& i : ::display ) {
+                    int type = ::String::Key( ::Searching, key );
+                    if ( type == 0 ) return;
+
+                    for ( auto& i : type == 1 && ::Searching.size() > 1 ? ::Search : ::display ) {
                         int index = ::Index( ::Search, i );
                         bool find =
                             ::String::SUpper( ::songs[ i ].title ).find( ::Searching ) != ::std::wstring::npos
