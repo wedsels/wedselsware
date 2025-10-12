@@ -188,16 +188,7 @@ struct Rect {
 
 namespace std {
     template <>
-    struct hash< ::Rect > {
-        ::size_t operator()( const ::Rect& r ) const {
-            ::size_t h1 = hash< int >{}( r.l );
-            ::size_t h2 = hash< int >{}( r.t );
-            ::size_t h3 = hash< int >{}( r.r );
-            ::size_t h4 = hash< int >{}( r.b );
-
-            return ( ( ( h1 ^ ( h2 << 1 ) ) ^ ( h3 << 1 ) ) ^ ( h4 << 1 ) );
-        }
-    };
+    struct hash< ::Rect > { int operator()( const ::Rect& r ) const { return ( ( ( r.l ^ ( r.t << 1 ) ) ^ ( r.r << 1 ) ) ^ ( r.b << 1 ) ); } };
 }
 
 enum struct DrawType { None, Normal, Redo };
