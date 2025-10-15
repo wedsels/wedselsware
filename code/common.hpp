@@ -18,10 +18,9 @@
 #include <mutex>
 #include <map>
 
-#define LINEINFO do { ::LineInfo::Line = __LINE__; ::LineInfo::File = __FILE__; ::LineInfo::Func = __func__; } while ( 0 )
-#define HR( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
-#define HER( hr ) do { LINEINFO; ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
-#define THREAD( body ) do { ::std::thread( [ = ] { LINEINFO; body } ).detach(); } while ( 0 )
+#define HR( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
+#define HER( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
+#define THREAD( body ) do { ::std::thread( [ = ] { body } ).detach(); } while ( 0 )
 
 #define WM_QUEUENEXT ( WM_USER + 1 )
 #define WM_KEYBOARD ( WM_USER + 2 )
@@ -65,12 +64,6 @@ inline ::std::vector< ::uint32_t > Apps;
 inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
 inline ::std::vector< ::uint32_t > Webs;
 inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
-
-namespace LineInfo {
-    inline int Line;
-    inline ::std::string File;
-    inline ::std::string Func;
-}
 
 namespace String {
     template< typename... Args >
