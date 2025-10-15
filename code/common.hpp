@@ -38,6 +38,11 @@
 #define MIDPOINT 600
 #define CURSOR ::LoadCursor( NULL, IDC_ARROW )
 
+struct Launch {
+    ::std::wstring path;
+    ::uint8_t* img;
+};
+
 inline ::HWND hwnd;
 
 extern ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
@@ -48,10 +53,18 @@ extern ::HRESULT InitDevice();
 extern ::HRESULT InitInput();
 extern ::HRESULT InitDraw();
 
+extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+
 extern void Mouse( int c, ::LPARAM l );
 extern void Keyboard( int c, ::LPARAM l );
 
 extern void UpdateDirectories( ::MSG& msg );
+
+inline ::std::vector< ::uint32_t > Apps;
+inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
+inline ::std::vector< ::uint32_t > Webs;
+inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
 
 namespace LineInfo {
     inline int Line;
@@ -102,6 +115,7 @@ namespace String {
     ::std::string WideUtf8( const ::std::wstring& str );
     ::std::string WideAnsii( const ::std::wstring& str );
     ::std::wstring Utf8Wide( const ::std::string& str );
+    ::std::wstring ResolveLnk( const ::std::wstring& str );
 };
 
 template < typename... T >

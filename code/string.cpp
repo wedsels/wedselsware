@@ -1,5 +1,8 @@
 #include "common.hpp"
 
+#include <shobjidl.h>
+#include <shlguid.h>
+
 ::std::wstring String::SUpper( ::std::wstring& string ) {
     ::std::transform( string.begin(), string.end(), string.begin(), ::toupper );
     return string;
@@ -65,4 +68,30 @@
     wide.pop_back();
 
     return wide;
+}
+
+::std::wstring String::ResolveLnk( const ::std::wstring& str ) {
+    static ::IShellLinkW* shell = nullptr;
+    static ::IPersistFile* file = nullptr;
+    
+    ::WCHAR path[ MAX_PATH ] = { 0 };
+
+    if ( !shell )
+        ::CoCreateInstance( CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLinkW, ( void** )&shell );
+    if ( !shell ) return L"";
+
+    if ( !file )
+        shell->QueryInterface( IID_IPersistFile, ( void** )&file );
+    if ( !file ) return L"";
+
+    if ( SUCCEEDED( file->Load( str.c_str(), STGM_READ ) ) )
+        if ( SUCCEEDED( shell->GetPath( path, MAX_PATH, nullptr, SLGP_UNCPRIORITY ) ) ) {
+            for ( auto& i : path )
+                if ( i == '\\' )
+                    i = '/';
+
+            return path;
+        }
+
+    return L"";
 }

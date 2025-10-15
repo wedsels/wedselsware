@@ -16,6 +16,8 @@ int lasttile = -1;
 ::uint8_t GetChannels( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer: return 4;
+        case ::GridTypes::Apps: return 4;
+        case ::GridTypes::Webs: return 4;
         default: return 3;
     }
 }
@@ -23,8 +25,8 @@ int lasttile = -1;
 ::uint8_t* GetCover( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer: return ::MixerEntries[ entry ].minicover;
-        case ::GridTypes::Apps: return nullptr;
-        case ::GridTypes::Webs: return nullptr;
+        case ::GridTypes::Apps: return ::AppsPath[ entry ].img;
+        case ::GridTypes::Webs: return ::WebsPath[ entry ].img;
         default: return ::songs[ entry ].minicover;
     }
 }
@@ -35,8 +37,8 @@ int lasttile = -1;
             return {
                 .scrl = [ entry ]( int dir ) { ::SetMixerVolume( entry, dir * -0.01 ); }
             };
-        case ::GridTypes::Apps: return { .lmb = [ entry ]() { ::Execute( ::AppsPath[ entry ] ); } };
-        case ::GridTypes::Webs: return { .lmb = [ entry ]() { ::Execute( ::WebsPath[ entry ] ); } };
+        case ::GridTypes::Apps: return { .lmb = [ entry ]() { ::Execute( ::AppsPath[ entry ].path ); } };
+        case ::GridTypes::Webs: return { .lmb = [ entry ]() { ::Execute( ::WebsPath[ entry ].path ); } };
         default:
             return {
                 .lmb = [ entry ]() {
@@ -65,10 +67,10 @@ void GetDisplay( ::uint32_t entry ) {
                 ::DisplayInformation[ 1 ] = [ entry ]() { return ::String::WConcat( ::Saved::Mixers[ entry ], L"%" ); };
             break;
         case ::GridTypes::Apps:
-                ::DisplayInformation[ 0 ] = [ entry ]() { return ::AppsPath[ entry ]; };
+                ::DisplayInformation[ 0 ] = [ entry ]() { return ::AppsPath[ entry ].path; };
             break;
         case ::GridTypes::Webs:
-                ::DisplayInformation[ 0 ] = [ entry ]() { return ::WebsPath[ entry ]; };
+                ::DisplayInformation[ 0 ] = [ entry ]() { return ::WebsPath[ entry ].path; };
             break;
         default:
                 ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };
@@ -112,9 +114,9 @@ struct Grid : ::UI {
     void Draw( ::DrawType dt ) {
         ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
-        ::std::vector< ::uint32_t >& Display = ::GetDisplay();
+        ::std::vector< ::uint32_t >& display = ::GetDisplay();
 
-        ::DisplayOffset = ::std::clamp( ::DisplayOffset, 0, ::std::max( 0, ( int )Display.size() - COLUMNS * ROWS ) );
+        ::DisplayOffset = ::std::clamp( ::DisplayOffset, 0, ::std::max( 0, ( int )display.size() - COLUMNS * ROWS ) );
 
         if ( dt > ::DrawType::Normal || ::DisplayOffset != ::lasttile ) {
             ::DrawSlide();
@@ -123,20 +125,20 @@ struct Grid : ::UI {
                 int loc = i + ::DisplayOffset;
                 ::Rect rect { ( MINICOVER + SPACING ) * ( i % COLUMNS ), ( MINICOVER + SPACING ) * ( i / COLUMNS ), MINICOVER };
 
-                if ( loc >= Display.size() ) {
+                if ( loc >= display.size() ) {
                     float l = 1.0f;
                     ::DrawBox( rect, COLORALPHA, l );
                 } else
                     ::DrawImage(
                         rect,
-                        ::GetCover( Display[ loc ] ),
+                        ::GetCover( display[ loc ] ),
                         1.0f,
-                        ::GetClick( Display[ loc ] ),
-                        ::GetChannels( Display[ loc ] )
+                        ::GetClick( display[ loc ] ),
+                        ::GetChannels( display[ loc ] )
                     );
 
                 if ( rect == ::Input::hover )
-                    ::GetDisplay( Display[ loc ] );
+                    ::GetDisplay( display[ loc ] );
             }
         }
         ::lasttile = ::DisplayOffset;

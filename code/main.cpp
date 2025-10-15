@@ -4,6 +4,7 @@
 
 #define IDI_ICON1 101
 
+#include <shellapi.h>
 #include <DbgHelp.h>
 #include <csignal>
 
@@ -151,8 +152,10 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     ::hwnd = ::Window( hInstance );
 
-    HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::uint32_t id = ::String::Hash( p ); ::Apps.push_back( id ); ::AppsPath.emplace( id, p ); }, []( ::uint32_t id ) { ::Apps.erase( ::Apps.begin() + ::Index( ::Apps, id ) ); ::AppsPath.erase( id ); } ) );
-    HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::uint32_t id = ::String::Hash( p ); ::Webs.push_back( id ); ::WebsPath.emplace( id, p ); }, []( ::uint32_t id ) { ::Webs.erase( ::Webs.begin() + ::Index( ::Webs, id ) ); ::WebsPath.erase( id ); } ) );
+    HER( ::CoInitialize( NULL ) );
+
+    HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Apps, ::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Apps, ::AppsPath ); } ) );
+    HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Webs, ::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Webs, ::WebsPath ); } ) );
     HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, ::Remove ) );
 
     HER( ::InitializeFont() );

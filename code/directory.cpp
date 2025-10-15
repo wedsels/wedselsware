@@ -89,6 +89,27 @@ void WatchDirectory( const wchar_t* path, ::std::function< void( int, const wcha
     ::CloseHandle( hDir );
 }
 
+void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map ) {
+    ::std::wstring res = ::String::ResolveLnk( path );
+    if ( res.empty() )
+        res = path;
+
+    ::uint32_t id = ::String::Hash( path );
+
+    ids.push_back( id );
+    map.emplace( id, ::Launch{ .path = res, .img = ::ArchiveHICON( res.c_str(), MINICOVER ) } );
+}
+
+void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map ) {
+    int i = ::Index( ids, id );
+    if ( i < 0 )
+        return;
+
+    ::delete[] map[ id ].img;
+    ids.erase( ids.begin() + i );
+    map.erase( id );
+}
+
 ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
     ::Directory dir = { path, add, remove, ::std::filesystem::directory_iterator( path ) };
     Directories.push_back( dir );

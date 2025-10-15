@@ -5,6 +5,8 @@
 #include <stb_image.h>
 #include <stb_image_resize2.h>
 
+#include <shellapi.h>
+
 ::uint8_t* ResizeImage( ::uint8_t* data, int w, int h, int scale ) {
     if ( !data ) return nullptr;
 
@@ -43,7 +45,22 @@
     return ::ProcessImage( data, w, h, scale );
 }
 
-::uint8_t* ArchiveHICON( ::HICON& icon, int size ) {
+::uint8_t* ArchiveHICON( ::LPCWSTR path, int size ) {
+    ::HICON icon;
+
+    ::std::wstring p = path;
+    for ( auto& i : p )
+        if ( i == '/' )
+            i = '\\';
+    
+    if ( !p.contains( L".exe" ) )
+        return nullptr;
+
+    ::SHFILEINFOW shFileInfo = { 0 };
+    if ( ::SHGetFileInfoW( p.c_str(), 0, &shFileInfo, sizeof( shFileInfo ), SHGFI_ICON | SHGFI_LARGEICON ) )
+        icon = shFileInfo.hIcon;
+    else return nullptr;
+
     ::HDC hdc = ::CreateCompatibleDC( NULL );
 
     ::BITMAPINFO bmi = {};

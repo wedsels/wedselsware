@@ -72,13 +72,9 @@ void SetMixers() {
 
                         if ( !FAILED( pVolume->SetMasterVolume( ( float )::Saved::Mixers[ id ], NULL ) ) ) {
                             if ( !::MixerEntries.contains( id ) ) {
-                                ::MixerEntries[ id ] = { .name = name };
+                                ::MixerEntries[ id ] = { .name = name, .minicover = ::ArchiveHICON( p, MINICOVER ) };
                                 ::instances[ id ] = {};
                                 ::MixersActive.push_back( id );
-
-                                ::HICON hIcon = NULL;
-                                if ( ::ExtractIconExW( p, 0, NULL, &hIcon, 1 ) > 0 )
-                                    ::MixerEntries[ id ].minicover = ::ArchiveHICON( hIcon, MINICOVER );
                             }
                             ::instances[ id ].insert( pVolume );
                         }
@@ -110,9 +106,6 @@ void CALLBACK WinEventProc( ::HWINEVENTHOOK hook, ::DWORD event, ::HWND hwnd, ::
 
 ::HRESULT InitializeMixer() {
     ::HWINEVENTHOOK hook = ::SetWinEventHook( EVENT_OBJECT_CREATE, EVENT_OBJECT_CREATE, NULL, ::WinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT );
-
-    ::CoUninitialize();
-    HR( ::CoInitialize( NULL ) );
 
     ::IMMDeviceEnumerator* enumerator;
     HR( ::CoCreateInstance( __uuidof( ::MMDeviceEnumerator ), NULL, CLSCTX_ALL, __uuidof( ::IMMDeviceEnumerator ), ( ::LPVOID* )&enumerator ) );

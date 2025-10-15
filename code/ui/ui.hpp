@@ -25,11 +25,6 @@ inline ::std::atomic< ::uint32_t > Canvas[ WINWIDTH * WINHEIGHT ];
 inline ::std::wstring Searching;
 inline ::std::vector< ::uint32_t > Search;
 
-inline ::std::vector< ::uint32_t > Apps;
-inline ::std::map< ::uint32_t, ::std::wstring > AppsPath;
-inline ::std::vector< ::uint32_t > Webs;
-inline ::std::map< ::uint32_t, ::std::wstring > WebsPath;
-
 inline ::std::atomic< bool > PauseDraw = true;
 
 enum struct GridTypes { Songs, Queue, Search, Mixer, Apps, Webs, Count };
@@ -46,7 +41,7 @@ extern void RenderFrame();
 extern ::uint8_t* ResizeImage( ::uint8_t* data, int w, int h, int scale );
 extern ::uint8_t* ArchiveImage( const char* path, int size );
 extern ::uint8_t* ArchiveImage( uint8_t* imgdata, int size, int scale );
-extern ::uint8_t* ArchiveHICON( ::HICON& icon, int size );
+extern ::uint8_t* ArchiveHICON( ::LPCWSTR path, int size );
 
 extern int TextWidth( ::std::wstring& text );
 
