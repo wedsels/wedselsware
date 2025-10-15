@@ -22,25 +22,6 @@ void Seek( int time ) {
     ::swr_inject_silence( ::Playing.SWR, framecount * 2 );
 }
 
-double fsin( double x ) {
-    static constexpr int luts = 8192;
-    static constexpr double tpi = 2.0 * M_PI;
-    static constexpr double ipti = 1.0 / tpi;
-
-    static const ::std::array< double, luts > lut = [] {
-        ::std::array< double, luts > arr{};
-        for ( int i = 0; i < luts; ++i )
-            arr[ i ] = ::std::sin( tpi * i / luts );
-        return arr;
-    }();
-
-    x = ::std::fmod( x, tpi );
-    if ( x < 0.0 )
-        x += tpi;
-
-    return lut[ ( int )( x * ipti * luts ) ];
-}
-
 void Spectrum( double* data, ::uint32_t frames ) {
     static ::fftw_complex* fout = nullptr;
     static ::fftw_plan p = nullptr;
@@ -95,6 +76,8 @@ void Spectrum( double* data, ::uint32_t frames ) {
         if ( w == ::Bands[ i ] )
             continue;
 
+        static const int offset = ( WINHEIGHT - MIDPOINT * 2 ) / 4;
+
         int change = ::Bands[ i ] - w;
         if ( change > 0 )
             for ( int x = w; x < w + change; x++ )
@@ -104,11 +87,7 @@ void Spectrum( double* data, ::uint32_t frames ) {
                 ::SetPixel(
                     MIDPOINT + x * 2,
                     i * 2,
-                    ::BGRA(
-                        127 * ( ::fsin( 0.02 * x + ::cursor ) + 1 ),
-                        127 * ( ::fsin( 0.02 * i + ::cursor + 2.0 ) + 1 ),
-                        127 * ( ::fsin( 0.02 * ( x + i ) + ::cursor + 4.0 ) + 1 )
-                    )
+                    ::ImagePixelColor( ::Playing.Cover, x, i - offset, MIDPOINT )
                 );
 
         ::Bands[ i ] = w;

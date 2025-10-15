@@ -32,21 +32,8 @@ void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< ::Input:
     ::CheckClick( r, &light, c );
 
     for ( int y = 0; y < size; y++ )
-        for ( int x = 0; x < size; x++ ) {
-            int cx = r.l + x;
-            int cy = r.t + y;
-
-            ::uint8_t colors[] = { 255, 255, 255, 255 };
-
-            if ( img ) {
-                int index = ( y * size + x ) * channels;
-
-                for ( int i = 0; i < channels; i++ )
-                    colors[ i ] = ( ::uint8_t )( img[ index + i ] * ( i < 3 ? 1.0f : light ) );
-
-                ::SetPixel( cx, cy, ::BGRA( colors[ 0 ], colors[ 1 ], colors[ 2 ], colors[ 3 ], light ) );
-            } else ::SetPixel( cx, cy, ::Multiply( COLORGHOST, light ) );
-        }
+        for ( int x = 0; x < size; x++ )
+            ::SetPixel( r.l + x, r.t + y, ::ImagePixelColor( img, x, y, size, channels, light ) );
 }
 
 void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c ) {

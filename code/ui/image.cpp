@@ -7,6 +7,23 @@
 
 #include <shellapi.h>
 
+::uint32_t ImagePixelColor( ::uint8_t* img, int x, int y, int size, int channels, float light ) {
+    x = ( ( x % size ) + size ) % size;
+    y = ( ( y % size ) + size ) % size;
+
+    if ( !img )
+        return ::Multiply( COLORGHOST, light );
+
+    int index = ( y * size + x ) * channels;
+
+    ::uint8_t r = img[ index + 0 ];
+    ::uint8_t g = img[ index + 1 ];
+    ::uint8_t b = img[ index + 2 ];
+    ::uint8_t a = ( channels == 4 ) ? ( ::uint8_t )( img[ index + 3 ] * light ) : 255;
+
+    return ::BGRA( r, g, b, a, light );
+}
+
 ::uint8_t* ResizeImage( ::uint8_t* data, int w, int h, int scale ) {
     if ( !data ) return nullptr;
 

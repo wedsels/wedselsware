@@ -53,6 +53,8 @@ extern void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< :
 extern void DrawString( int x, int y, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c = {} );
 extern void CheckClick( ::Rect r, float* light, ::std::optional< ::Input::Click > c );
 
+extern ::uint32_t ImagePixelColor( ::uint8_t* img, int x, int y, int size, int channels = 3, float light = 1.0f );
+
 inline ::uint32_t BGRA( ::uint8_t r, ::uint8_t g, ::uint8_t b, ::uint8_t a = 255, float light = 1.0f ) {
     float alpha = a / 255.0f;
     return ( ::uint8_t )( b * light * alpha ) | ( ( ::uint8_t )( g * light * alpha ) << 8 ) | ( ( ::uint8_t )( r * light * alpha ) << 16 ) | ( ( a ) << 24 );
