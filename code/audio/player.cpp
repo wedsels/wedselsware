@@ -40,8 +40,8 @@ void Spectrum( double* data, ::uint32_t frames ) {
 
     int bins = frames / 2 + 1;
 
-    static const double minfq = 20.0;
-    static const double maxfq = 35000.0;
+    static const double minfq = 5.0;
+    static const double maxfq = 40000.0;
     static const double bandwidth = ( maxfq - minfq ) / BANDS;
 
     double maxmag = ::std::numeric_limits< double >::epsilon();
@@ -76,18 +76,16 @@ void Spectrum( double* data, ::uint32_t frames ) {
         if ( w == ::Bands[ i ] )
             continue;
 
-        static const int offset = ( WINHEIGHT - MIDPOINT * 2 ) / 4;
-
         int change = ::Bands[ i ] - w;
         if ( change > 0 )
             for ( int x = w; x < w + change; x++ )
-                ::SetPixel( MIDPOINT + x * 2, i * 2, COLORALPHA );
+                ::SetPixel( MIDPOINT + x * 2, ( BANDS - 1 - i ) * 2, COLORALPHA );
         else
             for ( int x = 0; x < w; x++ )
                 ::SetPixel(
                     MIDPOINT + x * 2,
-                    i * 2,
-                    ::ImagePixelColor( ::Playing.Cover, x, i - offset, MIDPOINT )
+                    ( BANDS - 1 - i ) * 2,
+                    ::ImagePixelColor( ::Playing.Cover, x + ::cursor * 50.0, ( BANDS - 1 - i ) + ::cursor * 25.0, MIDPOINT )
                 );
 
         ::Bands[ i ] = w;
@@ -99,7 +97,7 @@ void ClearBars() {
         for ( int i = 0; i < BANDS; i++ ) {
             if ( !::PauseDraw )
                 for ( int x = 0; x < ::Bands[ i ]; x++ )
-                    ::SetPixel( MIDPOINT + x * 2, i * 2, COLORALPHA );
+                    ::SetPixel( MIDPOINT + x * 2, ( BANDS - 1 - i ) * 2, COLORALPHA );
             ::Bands[ i ] = 0;
         }
 

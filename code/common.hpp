@@ -30,13 +30,6 @@
 #define WM_MIXER ( WM_USER + 6 )
 #define WM_MOUSE ( WM_USER + 7 )
 
-#define WINLEFT 3440
-#define WINTOP 5
-#define WINWIDTH 2560
-#define WINHEIGHT 1440
-#define MIDPOINT 600
-#define CURSOR ::LoadCursor( NULL, IDC_ARROW )
-
 struct Launch {
     ::std::wstring path;
     ::uint8_t* img;
@@ -52,12 +45,11 @@ extern ::HRESULT InitDevice();
 extern ::HRESULT InitInput();
 extern ::HRESULT InitDraw();
 
-extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-
 extern void Mouse( int c, ::LPARAM l );
 extern void Keyboard( int c, ::LPARAM l );
 
+extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
 extern void UpdateDirectories( ::MSG& msg );
 
 inline ::std::vector< ::uint32_t > Apps;

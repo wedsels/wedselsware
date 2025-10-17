@@ -1,12 +1,5 @@
 #include "../common.hpp"
 
-#define MINICOVER 64
-#define SPACING 3
-#define COLUMNS 9
-#define ROWS 12
-#define FONTHEIGHT 24
-#define FONTSPACE ( FONTHEIGHT / 3 )
-
 #define COLORALPHA 0x00000000
 #define COLORGHOST 0x64646464
 #define COLORPALE 0xFFB0ECDA
@@ -19,6 +12,19 @@
 #define COLORSTEEL 0xFF6D6D5D
 #define COLORCORAL 0xFF6370EC
 #define COLORCOLD 0xFFF1F0EC
+
+#define MINICOVER 64
+#define SPACING 3
+#define COLUMNS 9
+#define ROWS 12
+#define FONTHEIGHT 24
+#define FONTSPACE ( FONTHEIGHT / 3 )
+#define WINLEFT 3440
+#define WINTOP 5
+#define WINWIDTH 2560
+#define WINHEIGHT 1440
+
+inline constexpr int MIDPOINT = ( MINICOVER + SPACING ) * COLUMNS - SPACING;
 
 inline ::std::atomic< ::uint32_t > Canvas[ WINWIDTH * WINHEIGHT ];
 
