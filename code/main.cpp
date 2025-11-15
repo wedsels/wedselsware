@@ -31,25 +31,6 @@ void Load() {
 ::LONG WINAPI Crash( ::EXCEPTION_POINTERS* exceptionInfo ) {
     ::Save();
 
-    ::SYSTEMTIME time;
-    ::GetSystemTime( &time );
-
-    char dumpFileName[ 256 ];
-    ::sprintf_s( dumpFileName, "crash_dump_%04d%02d%02d_%02d%02d%02d.dmp", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond );
-
-    ::HANDLE hFile = ::CreateFileA( dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-    if ( hFile == INVALID_HANDLE_VALUE )
-        return EXCEPTION_EXECUTE_HANDLER;
-
-    ::MINIDUMP_EXCEPTION_INFORMATION mdei;
-    mdei.ThreadId = ::GetCurrentThreadId();
-    mdei.ClientPointers = FALSE;
-    mdei.ExceptionPointers = exceptionInfo;
-
-    ::MiniDumpWriteDump( ::GetCurrentProcess(), ::GetCurrentProcessId(), hFile, ::MiniDumpNormal, &mdei, NULL, NULL );
-
-    ::CloseHandle( hFile );
-
     return EXCEPTION_EXECUTE_HANDLER;
 }
 

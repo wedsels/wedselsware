@@ -31,7 +31,7 @@ struct Cover : ::UI {
         ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
         if ( dt > ::DrawType::Normal || ::Saved::Playing != ::lastportrait ) {
-            ::Rect rect { 0, WINHEIGHT - MIDPOINT, MIDPOINT };
+            ::Rect rect { 0, WINHEIGHT - ::MIDPOINT, ::MIDPOINT };
 
             ::Input::Click c {
                 .lmb = []() { ::EnumNext( ::GridType, ::Input::State::shift ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
@@ -71,14 +71,7 @@ struct Cover : ::UI {
             );
 
             if ( rect == ::Input::hover ) {
-                ::DisplayInformation[ 0 ] = []() { return ::songs[ ::Saved::Playing ].title; };
-                ::DisplayInformation[ 1 ] = []() { return ::songs[ ::Saved::Playing ].artist; };
-                ::DisplayInformation[ 2 ] = []() { return ::songs[ ::Saved::Playing ].encoding; };
-                ::DisplayInformation[ 3 ] = []() { return ::String::WConcat( ( int )::cursor, L"s / ", ::Playing.Duration, L"s" ); };
-                ::DisplayInformation[ 4 ] = []() { return ::String::WConcat( ::Playing.Size, L"mb" ); };
-                ::DisplayInformation[ 5 ] = []() { return ::String::WConcat( ::Playing.Bitrate, L"kbps" ); };
-                ::DisplayInformation[ 6 ] = []() { return ::String::WConcat( ::Playing.Samplerate, L"Hz" ); };
-                ::DisplayInformation[ 7 ] = []() { return ::String::WConcat( ::Saved::Volumes[ ::Saved::Playing ], L"%" ); };
+                ::DefaultDisplay( ::Saved::Playing );
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::String::WConcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 2 ] = []() { return ::String::WConcat( L"Sorting: ", ::STNames[ ::Saved::Sorting ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 1 ] = []() { return ::String::WConcat( L"Playback: ", ::PBNames[ ::Saved::Playback ] ); };
@@ -91,7 +84,7 @@ struct Cover : ::UI {
                 for ( int i = 0; i < ARRAYSIZE( ::DisplayInformation ); i++ )
                     if ( ::DisplayInformation[ i ] ) {
                         ::std::wstring info = ::DisplayInformation[ i ]();
-                        ::DrawString( 0, WINHEIGHT - MIDPOINT + ( FONTHEIGHT + SPACING ) * i, MIDPOINT, info );
+                        ::DrawString( 0, WINHEIGHT - ::MIDPOINT + ( FONTHEIGHT + SPACING ) * i, ::MIDPOINT, info );
                     }
         }
         ::lastportrait = ::Saved::Playing;

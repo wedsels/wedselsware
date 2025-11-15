@@ -6,7 +6,7 @@
 
 constexpr int BANDS = WINHEIGHT / 2;
 
-::uint16_t Bands[ BANDS ];
+::uint16_t Bands[ ::BANDS ];
 
 void Seek( int time ) {
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
@@ -22,56 +22,47 @@ void Seek( int time ) {
     ::swr_inject_silence( ::Playing.SWR, framecount * 2 );
 }
 
-void Spectrum( double* data, ::uint32_t frames ) {
-    static ::fftw_complex* fout = nullptr;
-    static ::fftw_plan p = nullptr;
-    static double* fin = nullptr;
+void Waveform( double* data, ::uint32_t frames ) {
+    double samplesPerBar = ( double )frames / ::BANDS;
+    ::std::vector< double > barAmplitudes( ::BANDS, 0.0 );
 
-    if ( !fin ) {
-        fout = ( ::fftw_complex* )::fftw_malloc( sizeof( ::fftw_complex ) * frames );
-        fin = ( double* )::fftw_malloc( sizeof( double ) * frames );
-        p = ::fftw_plan_dft_r2c_1d( frames, fin, fout, FFTW_ESTIMATE );
-    }
+    for ( int bar = 0; bar < ::BANDS; ++bar ) {
+        int startSampleF = ::std::floor( bar * samplesPerBar );
+        int endSampleF = ::std::ceil( ( bar + 1 ) * samplesPerBar );
 
-    for ( int i = 0; i < ( int )frames; i++ )
-        fin[ i ] = data[ i ] * ( 0.5 * ( 1 - ::cos( 2 * M_PI * i / ( frames - 1 ) ) ) );
-
-    ::fftw_execute( p );
-
-    int bins = frames / 2 + 1;
-
-    static const double minfq = 5.0;
-    static const double maxfq = 40000.0;
-    static const double bandwidth = ( maxfq - minfq ) / BANDS;
-
-    double maxmag = ::std::numeric_limits< double >::epsilon();
-    for ( int i = 0; i < bins; i++ )
-        maxmag = ::std::max( maxmag, ::sqrt( fout[ i ][ 0 ] * fout[ i ][ 0 ] + fout[ i ][ 1 ] * fout[ i ][ 1 ] ) );
-
-    for ( int i = 0; i < bins; i++ ) {
-        fout[ i ][ 0 ] /= maxmag;
-        fout[ i ][ 1 ] /= maxmag;
-    }
-
-    for ( int i = 0; i < BANDS; i++ ) {
-        int start = ( int )::std::max( 0.0, ( ( minfq + ( bandwidth * i ) ) / ( ::Device.sampleRate / 2.0 ) ) * bins );
-        int end = ( int )::std::min( bins - 1.0, ( ( minfq + ( bandwidth * ( i + 1 ) ) ) / ( ::Device.sampleRate / 2.0 ) ) * bins );
-
-        double sum = 0.0;
+        double sumAmplitude = 0.0;
         int count = 0;
-        for ( int j = start; j <= end; j++ ) {
-            double magnitude = ::sqrt( fout[ j ][ 0 ] * fout[ j ][ 0 ] + fout[ j ][ 1 ] * fout[ j ][ 1 ] );
 
-            double fq = j * ::Device.sampleRate / ( 0.05 * bins );
-            double weight = 1.0 + fq / maxfq;
-            sum += magnitude * weight;
-            count++;
+        for ( int i = startSampleF; i < endSampleF && i < frames; ++i ) {
+            sumAmplitude += ::std::abs( data[ i ] );
+            ++count;
         }
 
-        double avg = count > 0 ? sum / count : 0.0;
-        avg *= ::Saved::Volumes[ ::Saved::Playing ];
+        if ( count > 0 )
+            barAmplitudes[ bar ] = sumAmplitude / count;
+    }
 
-        int w = ( int )::std::clamp( WINWIDTH / 2.0 * ::log10( 1.0 + avg ), 1.0, ( WINWIDTH - MIDPOINT ) / 2.0 );
+    static double smoothedAmplitudes[ ::BANDS ];
+    constexpr double smoothingFactor = 0.25;
+
+    for ( int i = 0; i < ::BANDS; ++i ) {
+        smoothedAmplitudes[ i ] =
+            smoothingFactor * barAmplitudes[ i ] + ( 1.0 - smoothingFactor ) * smoothedAmplitudes[ i ];
+        barAmplitudes[ i ] = smoothedAmplitudes[ i ];
+    }
+
+    static double globalMaxAmplitude = 0.00000001;
+    constexpr double decayRate = 0.9;
+
+    double maxAmplitude = *::std::max_element( barAmplitudes.begin(), barAmplitudes.end() );
+    globalMaxAmplitude = ::std::max( globalMaxAmplitude * decayRate, maxAmplitude );
+
+    if ( globalMaxAmplitude > 0 )
+        for ( auto& amp : barAmplitudes )
+            amp /= globalMaxAmplitude;
+
+    for ( int i = 0; i < ::BANDS; ++i ) {
+        int w = ::std::clamp( WINWIDTH / 2.0 * ( barAmplitudes[ i ] * 0.5 ) * ::Saved::Volumes[ ::Saved::Playing ], 1.0, ( WINWIDTH - ::MIDPOINT ) / 2.0 );
 
         if ( w == ::Bands[ i ] )
             continue;
@@ -79,14 +70,13 @@ void Spectrum( double* data, ::uint32_t frames ) {
         int change = ::Bands[ i ] - w;
         if ( change > 0 )
             for ( int x = w; x < w + change; x++ )
-                ::SetPixel( MIDPOINT + x * 2, ( BANDS - 1 - i ) * 2, COLORALPHA );
-        else
+                ::SetPixel( ::MIDPOINT + x * 2, ( ::BANDS - 1 - i ) * 2, COLORALPHA );
+        else {
+            int xoff = ::cursor * 50.0;
+            int yoff = ::cursor * 25.0;
             for ( int x = 0; x < w; x++ )
-                ::SetPixel(
-                    MIDPOINT + x * 2,
-                    ( BANDS - 1 - i ) * 2,
-                    ::ImagePixelColor( ::Playing.Cover, x + ::cursor * 50.0, ( BANDS - 1 - i ) + ::cursor * 25.0, MIDPOINT )
-                );
+                ::SetPixel( ::MIDPOINT + x * 2, ( ::BANDS - 1 - i ) * 2, ::ImagePixelColor( ::Playing.Cover, x + xoff, ::BANDS - 1 - i + yoff, ::MIDPOINT ) );
+        }
 
         ::Bands[ i ] = w;
     }
@@ -94,10 +84,10 @@ void Spectrum( double* data, ::uint32_t frames ) {
 
 void ClearBars() {
     if ( ::Bands[ 0 ] > 0 ) {
-        for ( int i = 0; i < BANDS; i++ ) {
+        for ( int i = 0; i < ::BANDS; i++ ) {
             if ( !::PauseDraw )
                 for ( int x = 0; x < ::Bands[ i ]; x++ )
-                    ::SetPixel( MIDPOINT + x * 2, ( BANDS - 1 - i ) * 2, COLORALPHA );
+                    ::SetPixel( ::MIDPOINT + x * 2, ( ::BANDS - 1 - i ) * 2, COLORALPHA );
             ::Bands[ i ] = 0;
         }
 
@@ -136,7 +126,7 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
         if ( ::avcodec_send_packet( ::Playing.Codec, ::Playing.Packet ) < 0 || ::avcodec_receive_frame( ::Playing.Codec, ::Playing.Frame ) < 0 )
             continue;
 
-        int out = ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples );
+        int out = ::Playing.Frame->extended_data && ::Playing.Frame->nb_samples > 0 ? ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples ) : 0;
 
         ::av_packet_unref( ::Playing.Packet );
         ::av_frame_unref( ::Playing.Frame );
@@ -151,7 +141,7 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
     if ( ::PauseDraw )
         ::ClearBars();
     else {
-        ::Spectrum( ( double* )output, frames );
+        ::Waveform( ( double* )output, frames );
 
         if ( lastsecond != ( int )::cursor )
             ::Redraw( ::DrawType::Redo );

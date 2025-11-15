@@ -3,9 +3,9 @@
 void DrawCursor() {
     ::Rect r = {
         0,
-        WINHEIGHT - MIDPOINT - SPACING * 3,
-        MIDPOINT,
-        WINHEIGHT - MIDPOINT - SPACING
+        WINHEIGHT - ::MIDPOINT - SPACING * 3,
+        ::MIDPOINT,
+        WINHEIGHT - ::MIDPOINT - SPACING
     };
 
     float l = 1.0f;
@@ -20,7 +20,7 @@ void DrawCursor() {
         }
     );
 
-    r.r = ( int )( ( MIDPOINT - SPACING ) * ( ::cursor / ::Playing.Duration ) );
+    r.r = ( int )( ( ::MIDPOINT - SPACING ) * ( ::cursor / ::Playing.Duration ) );
     ::DrawBox( r, COLORCORAL, l );
 }
 

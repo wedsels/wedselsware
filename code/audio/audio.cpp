@@ -1,10 +1,10 @@
 #include "audio.hpp"
 
-::HRESULT SetSong( ::uint32_t song ) {
+void SetSong( ::uint32_t song ) {
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
     if ( !::songs.contains( song ) )
-        return S_FALSE;
+        return;
 
     ::Clean( ::Playing );
 
@@ -13,8 +13,9 @@
     if ( FAILED( ::FFMPEG( s.path, ::Playing ) ) ) {
         ::Clean( ::Playing );
 
-        return S_FALSE;
+        return;
     }
+
     ::Saved::Playing = s.id;
     ::SetVolume();
     ::swr_inject_silence( ::Playing.SWR, ::Device.sampleRate / 100 * 2 );
@@ -23,8 +24,6 @@
     ::Redraw( ::DrawType::Redo );
 
     ::DisplayOffset = ::Index( ::display, s.id );
-
-    return S_OK;
 }
 
 void ArchiveSong( ::std::wstring path ) {
@@ -68,7 +67,12 @@ void ArchiveSong( ::std::wstring path ) {
         else if ( i == L';' ) break;
         else media.title += i;
 
-    media.minicover = ::ResizeImage( play.Cover, MIDPOINT, MIDPOINT, MINICOVER );
+    media.Duration = play.Duration;
+    media.Size = play.Size;
+    media.Samplerate = play.Samplerate;
+    media.Bitrate = play.Bitrate;
+
+    media.minicover = ::ResizeImage( play.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
     ::Clean( play );
 
     if ( ::Saved::Volumes.find( media.id ) == ::Saved::Volumes.end() )
@@ -86,10 +90,16 @@ void ArchiveSong( ::std::wstring path ) {
 
 ::HRESULT FFMPEG( ::std::wstring& path, ::Play& Playing ) {
     HR( ::avformat_open_input( &Playing.Format, ::String::WideUtf8( path ).c_str(), 0, 0 ) );
+
+    if ( !Playing.Format ) return E_FAIL;
+
     HR( ::avformat_find_stream_info( Playing.Format, 0 ) );
 
     for ( unsigned int i = 0; i < Playing.Format->nb_streams; i++ ) {
         ::AVStream* stream = Playing.Format->streams[ i ];
+
+        if ( !stream || !stream->codecpar )
+            continue;
     
         auto id = stream->codecpar->codec_id;
         if ( id == ::AV_CODEC_ID_MJPEG
@@ -105,7 +115,7 @@ void ArchiveSong( ::std::wstring path ) {
             if ( ::av_read_frame( Playing.Format, p ) == 0 )
                 if ( p->size > 0 && p->stream_index == i ) {
                     ::delete[] Playing.Cover;
-                    Playing.Cover = ::ArchiveImage( p->data, p->size, MIDPOINT );
+                    Playing.Cover = ::ArchiveImage( p->data, p->size, ::MIDPOINT );
                 }
             ::av_packet_free( &p );
         }
@@ -156,19 +166,26 @@ void ArchiveSong( ::std::wstring path ) {
             || id == ::AV_CODEC_ID_WMAVOICE
             || id == ::AV_CODEC_ID_COOK
         ) {
+            if ( stream->time_base.den == 0 )
+                continue;
+
             Playing.Duration = ( ::uint16_t )( stream->duration / ( double )stream->time_base.den );
             Playing.Timebase = ::av_q2d( stream->time_base );
             Playing.Stream = i;
 
             const ::AVCodec* codec = ::avcodec_find_decoder( stream->codecpar->codec_id );
-            if ( !( Playing.Codec = ::avcodec_alloc_context3( codec ) ) ) return S_FALSE;
+            if ( !codec ) return E_FAIL;
+            if ( !( Playing.Codec = ::avcodec_alloc_context3( codec ) ) ) return E_FAIL;
             HR( ::avcodec_parameters_to_context( Playing.Codec, stream->codecpar ) );
             Playing.Codec->request_sample_fmt = ::AV_SAMPLE_FMT_FLT;
             HR( ::avcodec_open2( Playing.Codec, codec, nullptr ) );
 
+            ::AVChannelLayout layout;
+            ::av_channel_layout_default( &layout, ::Device.playback.channels );
+
             ::swr_alloc_set_opts2(
                 &Playing.SWR,
-                &Playing.Codec->ch_layout,
+                &layout,
                 ::AV_SAMPLE_FMT_FLT,
                 ::Device.sampleRate,
                 &Playing.Codec->ch_layout,
@@ -178,14 +195,14 @@ void ArchiveSong( ::std::wstring path ) {
                 nullptr
             );
 
-            if ( !Playing.SWR ) return S_FALSE;
+            if ( !Playing.SWR ) return E_FAIL;
             HR( ::swr_init( Playing.SWR ) );
-            if ( !( Playing.Frame = ::av_frame_alloc() ) ) return S_FALSE;
-            if ( !( Playing.Packet = ::av_packet_alloc() ) ) return S_FALSE;
+            if ( !( Playing.Frame = ::av_frame_alloc() ) ) return E_FAIL;
+            if ( !( Playing.Packet = ::av_packet_alloc() ) ) return E_FAIL;
         }
     }
 
-    if ( !Playing.Codec ) return S_FALSE;
+    if ( !Playing.Codec ) return E_FAIL;
 
     Playing.Samplerate = Playing.Codec->sample_rate;
     Playing.Bitrate = Playing.Format->bit_rate / 1000;

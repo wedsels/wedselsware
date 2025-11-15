@@ -60,6 +60,17 @@ int lasttile = -1;
     }
 }
 
+void DefaultDisplay( ::uint32_t entry ) {
+    ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };
+    ::DisplayInformation[ 1 ] = [ entry ]() { return ::songs[ entry ].artist; };
+    ::DisplayInformation[ 2 ] = [ entry ]() { return ::songs[ entry ].encoding; };
+    ::DisplayInformation[ 3 ] = [ entry ]() { return ::String::WConcat( ( int )::cursor, L"s / ", ::songs[ entry ].Duration, L"s" ); };
+    ::DisplayInformation[ 4 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Size, L"mb" ); };
+    ::DisplayInformation[ 5 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Bitrate, L"kbps" ); };
+    ::DisplayInformation[ 6 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Samplerate, L"Hz" ); };
+    ::DisplayInformation[ 7 ] = [ entry ]() { return ::String::WConcat( ::Saved::Volumes[ entry ], L"%" ); };
+}
+
 void GetDisplay( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer:
@@ -73,9 +84,7 @@ void GetDisplay( ::uint32_t entry ) {
                 ::DisplayInformation[ 0 ] = [ entry ]() { return ::WebsPath[ entry ].path; };
             break;
         default:
-                ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };
-                ::DisplayInformation[ 1 ] = [ entry ]() { return ::songs[ entry ].artist; };
-                ::DisplayInformation[ 2 ] = [ entry ]() { return ::songs[ entry ].encoding; };
+                ::DefaultDisplay( entry );
             break;
     }
 }
@@ -89,7 +98,7 @@ void DrawSlide() {
     ::Rect r = {
         0,
         ROWS * ( MINICOVER + SPACING ),
-        MIDPOINT,
+        ::MIDPOINT,
         ROWS * ( MINICOVER + SPACING ) + SPACING * 2
     };
 
@@ -104,7 +113,7 @@ void DrawSlide() {
         }
     );
 
-    r.l = ( int )( ( MIDPOINT - SPACING * 2 ) * ( ::DisplayOffset / ( ::std::max( ( int )Display.size() - grid, grid ) + 1.0f ) ) );
+    r.l = ( int )( ( ::MIDPOINT - SPACING * 2 ) * ( ::DisplayOffset / ( ::std::max( ( int )Display.size() - grid, grid ) + 1.0f ) ) );
     r.r = r.l + SPACING * 2;
     l = 1.0f;
     ::DrawBox( r, COLORCORAL, l );

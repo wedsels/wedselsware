@@ -17,9 +17,9 @@ struct Play {
     ::SwrContext* SWR;
     ::AVPacket* Packet;
     ::AVFrame* Frame;
-    ::size_t Size;
     ::uint16_t Duration;
     ::uint8_t* Cover;
+    ::size_t Size;
     double Timebase;
     int Samplerate;
     int Bitrate;
@@ -32,9 +32,13 @@ struct media {
     ::std::wstring artist;
     ::std::wstring title;
     ::std::wstring path;
-    ::uint32_t id;
     ::uint64_t write;
+    ::uint32_t id;
+    ::uint16_t Duration;
     ::uint8_t* minicover;
+    ::size_t Size;
+    int Samplerate;
+    int Bitrate;
 
     bool operator==( const ::media& m ) const { return id == m.id; }
 };
@@ -131,6 +135,8 @@ inline void Clean( ::Play& Play ) {
     if ( Play.SWR ) ::swr_free( &Play.SWR );
 }
 
+extern void DefaultDisplay( ::uint32_t entry );
+
 extern void SetMixers();
 extern void SetMixerVolume( ::uint32_t entry, double change );
 
@@ -138,7 +144,7 @@ extern void Seek( int time );
 extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount );
 extern void SetVolume( double v = 0.0 );
 extern void ArchiveSong( ::std::wstring path );
-extern ::HRESULT SetSong( ::uint32_t song );
+extern void SetSong( ::uint32_t song );
 extern ::HRESULT FFMPEG( ::std::wstring& path, ::Play& Playing );
 extern ::HRESULT SetDefaultDevice();
 

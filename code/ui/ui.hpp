@@ -20,7 +20,7 @@
 #define FONTHEIGHT 24
 #define FONTSPACE ( FONTHEIGHT / 3 )
 #define WINLEFT 3440
-#define WINTOP 5
+#define WINTOP 0
 #define WINWIDTH 2560
 #define WINHEIGHT 1440
 
@@ -36,7 +36,7 @@ inline ::std::atomic< bool > PauseDraw = true;
 enum struct GridTypes { Songs, Queue, Search, Mixer, Apps, Webs, Count };
 inline ::GridTypes GridType = ::GridTypes::Songs;
 inline int DisplayOffset = 0;
-inline ::std::function< ::std::wstring() > DisplayInformation[ MIDPOINT / ( FONTHEIGHT + SPACING ) ];
+inline ::std::function< ::std::wstring() > DisplayInformation[ ::MIDPOINT / ( FONTHEIGHT + SPACING ) ];
 extern ::std::vector< ::uint32_t >& GetDisplay();
 
 inline ::std::mutex CanvasMutex;

@@ -46,17 +46,17 @@ int TextWidth( ::std::wstring& text ) {
 ::HRESULT InitializeFont() {
     ::std::ifstream file( "onryou.ttf", ::std::ios::binary | ::std::ios::ate );
     if ( !file )
-        return S_FALSE;
+        return E_FAIL;
 
     ::std::streamsize size = file.tellg();
     file.seekg( 0, ::std::ios::beg );
 
     FontBuffer.resize( size );
     if ( !file.read( ( char* )FontBuffer.data(), size ) )
-        return S_FALSE;
+        return E_FAIL;
 
     if ( !::stbtt_InitFont( &FontInfo, FontBuffer.data(), 0 ) )
-        return S_FALSE;
+        return E_FAIL;
 
     return S_OK;
 }
