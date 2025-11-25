@@ -183,7 +183,7 @@ void ArchiveSong( ::std::wstring path ) {
             ::AVChannelLayout layout;
             ::av_channel_layout_default( &layout, ::Device.playback.channels );
 
-            ::swr_alloc_set_opts2(
+            HR( ::swr_alloc_set_opts2(
                 &Playing.SWR,
                 &layout,
                 ::AV_SAMPLE_FMT_FLT,
@@ -193,7 +193,7 @@ void ArchiveSong( ::std::wstring path ) {
                 Playing.Codec->sample_rate,
                 0,
                 nullptr
-            );
+            ) );
 
             if ( !Playing.SWR ) return E_FAIL;
             HR( ::swr_init( Playing.SWR ) );

@@ -20,7 +20,7 @@ void DrawCursor() {
         }
     );
 
-    r.r = ( int )( ( ::MIDPOINT - SPACING ) * ( ::cursor / ::Playing.Duration ) );
+    r.r = ( int )( ( ::MIDPOINT - SPACING ) * ::std::min( 1.0, ( ::cursor / ::Playing.Duration ) ) );
     ::DrawBox( r, COLORCORAL, l );
 }
 

@@ -9,22 +9,23 @@
 
 void Mouse( int c, ::LPARAM l ) {
     switch( c ) {
-        case WM_MOUSEMOVE:
+        case WM_MOUSEMOVE: {
+                ::Rect o = ::Input::hover;
                 ::Input::hover = *( ::Rect* )l;
 
-                if ( !::Input::hover.empty() )
+                if ( !::Input::hover.empty() ) {
                     ESAFECALL( hvr );
-            break;
+                    if ( o != ::Input::hover && ::Input::State::lmb )
+                        ESAFECALL( lmb );
+                }
+        }   break;
         case WM_LBUTTONDOWN:
-                ::Input::State::lmb = true;
                 ESAFECALL( lmb );
             break;
         case WM_RBUTTONDOWN:
-                ::Input::State::rmb = true;
                 ESAFECALL( rmb );
             break;
         case WM_MBUTTONDOWN:
-                ::Input::State::mmb = true;
                 ESAFECALL( mmb );
             break;
         case WM_XBUTTONDOWN:
@@ -85,21 +86,27 @@ void Keyboard( int c, ::LPARAM l ) {
                         ::Message( WM_MOUSE, wParam, reinterpret_cast< ::WPARAM >( &over ) );
             }   break;
             case WM_LBUTTONDOWN:
+                    ::Input::State::lmb = true;
                     BLOCKCALL( lmb, WM_MOUSE, 0 );
                 break;
             case WM_LBUTTONUP:
+                    ::Input::State::lmb = false;
                     BLOCKCALL( lmb, WM_MOUSE, 0 );
                 break;
             case WM_RBUTTONDOWN:
+                    ::Input::State::rmb = true;
                     BLOCKCALL( rmb, WM_MOUSE, 0 );
                 break;
             case WM_RBUTTONUP:
+                    ::Input::State::rmb = false;
                     BLOCKCALL( rmb, WM_MOUSE, 0 );
                 break;
             case WM_MBUTTONDOWN:
+                    ::Input::State::mmb = true;
                     BLOCKCALL( mmb, WM_MOUSE, 0 );
                 break;
             case WM_MBUTTONUP:
+                    ::Input::State::mmb = false;
                     BLOCKCALL( mmb, WM_MOUSE, 0 );
                 break;
             case WM_XBUTTONDOWN:

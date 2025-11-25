@@ -125,7 +125,7 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::hwnd = ::Window( hInstance );
 
     HER( ::CoInitialize( NULL ) );
-
+// WHEN ADDING FILES IT IS NOT DONE IN BETWEEN THREAD UPDATES, BUT INSTEAD CONSUMES THE WHOLE TRHEAD
     HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Apps, ::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Apps, ::AppsPath ); } ) );
     HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Webs, ::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Webs, ::WebsPath ); } ) );
     HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, ::Remove ) );

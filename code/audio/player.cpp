@@ -111,29 +111,15 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
 
     if ( ::swr_get_delay( ::Playing.SWR, ::Playing.Codec->sample_rate ) > framecount )
         framecount -= ::swr_convert( ::Playing.SWR, &output, framecount, nullptr, NULL );
-    while ( framecount > 0 ) {
-        switch ( ::av_read_frame( ::Playing.Format, ::Playing.Packet ) ) {
-            case 0:
-                break;
-            case AVERROR_EOF:
-                    ::Message( WM_QUEUENEXT, 0, 0 );
-                return;
-            default:
-                    ::swr_inject_silence( ::Playing.SWR, frames * 2 );
-                return;
-        }
-
+    while ( ::av_read_frame( ::Playing.Format, ::Playing.Packet ) == 0 ) {
         if ( ::avcodec_send_packet( ::Playing.Codec, ::Playing.Packet ) < 0 || ::avcodec_receive_frame( ::Playing.Codec, ::Playing.Frame ) < 0 )
             continue;
 
-        int out = ::Playing.Frame->extended_data && ::Playing.Frame->nb_samples > 0 ? ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples ) : 0;
+        if ( ::Playing.Frame->extended_data && ::Playing.Frame->nb_samples > 0 )
+            ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples );
 
         ::av_packet_unref( ::Playing.Packet );
         ::av_frame_unref( ::Playing.Frame );
-
-        if ( out > 0 )
-            framecount -= out;
-        else break;
     }
 
     static int lastsecond = 0;
@@ -151,4 +137,7 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
         }
         lastsecond = ( int )::cursor;
     }
+
+    if ( ::cursor > ::Playing.Duration )
+        ::Message( WM_QUEUENEXT, 0, 0 );
 }

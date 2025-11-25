@@ -72,6 +72,7 @@ struct Cover : ::UI {
 
             if ( rect == ::Input::hover ) {
                 ::DefaultDisplay( ::Saved::Playing );
+                ::DisplayInformation[ 3 ] = []() { return ::String::WConcat( ( int )::cursor, L" / ", ::songs[ ::Saved::Playing ].Duration, L"s" ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::String::WConcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 2 ] = []() { return ::String::WConcat( L"Sorting: ", ::STNames[ ::Saved::Sorting ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 1 ] = []() { return ::String::WConcat( L"Playback: ", ::PBNames[ ::Saved::Playback ] ); };
