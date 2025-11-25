@@ -143,6 +143,6 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
         lastsecond = ( int )::cursor;
     }
 
-    if ( ::cursor > ::Playing.Duration )
+    if ( ( int )::cursor > ::Playing.Duration )
         ::Message( WM_QUEUENEXT, 0, 0 );
 }
