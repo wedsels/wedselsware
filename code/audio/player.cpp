@@ -115,11 +115,16 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
         if ( ::avcodec_send_packet( ::Playing.Codec, ::Playing.Packet ) < 0 || ::avcodec_receive_frame( ::Playing.Codec, ::Playing.Frame ) < 0 )
             continue;
 
+        int conv = 0;
+
         if ( ::Playing.Frame->extended_data && ::Playing.Frame->nb_samples > 0 )
-            ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples );
+            conv = ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples );
 
         ::av_packet_unref( ::Playing.Packet );
         ::av_frame_unref( ::Playing.Frame );
+
+        if ( conv <= 0 )
+            break;
     }
 
     static int lastsecond = 0;

@@ -44,12 +44,8 @@ namespace Input {
                     ::Execute( L"cmd.exe", 2 );
                 else if ( ::Input::State::alt )
                     ::SetDefaultDevice();
-                else if ( ::Input::State::shift ) {
-                    ::RECT rect = { WINLEFT + ::MIDPOINT, WINTOP, WINLEFT + ::MIDPOINT + WINWIDTH - ::MIDPOINT, WINTOP + WINHEIGHT };
-                    ::HWND h = ::GetForegroundWindow();
-                    ::AdjustWindowRectEx( &rect, ::GetWindowLongW( h, GWL_STYLE ), FALSE, ::GetWindowLongW( h, GWL_EXSTYLE ) );
-                    ::MoveWindow( h, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE );
-                }
+                else if ( ::Input::State::shift )
+                    ::Seek( 0 );
                 else
                     ::Execute( L"C:\\Program Files\\Mozilla Firefox\\firefox.exe" );
             }
