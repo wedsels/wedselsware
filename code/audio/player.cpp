@@ -99,6 +99,7 @@ void ClearBars() {
 }
 
 void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
+
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
     if ( ::PauseAudio || !::Playing.SWR ) {
@@ -106,19 +107,29 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
         return;
     }
 
+    ::uint8_t* out = output;
     ::ma_uint32 frames = framecount;
-    ::cursor += frames / ( double )device->sampleRate;
 
-    if ( ::swr_get_delay( ::Playing.SWR, ::Playing.Codec->sample_rate ) > framecount )
-        framecount -= ::swr_convert( ::Playing.SWR, &output, framecount, nullptr, NULL );
-    while ( ::av_read_frame( ::Playing.Format, ::Playing.Packet ) == 0 ) {
-        if ( ::avcodec_send_packet( ::Playing.Codec, ::Playing.Packet ) < 0 || ::avcodec_receive_frame( ::Playing.Codec, ::Playing.Frame ) < 0 )
+    int to = FFMIN( frames, ::av_rescale_rnd( ::swr_get_delay( ::Playing.SWR, ::Playing.Codec->sample_rate ), device->sampleRate, ::Playing.Codec->sample_rate, ::AV_ROUND_UP ) );
+    if ( to > 0 ) {
+        int wrote = ::swr_convert( ::Playing.SWR, &out, to, nullptr, 0 );
+        out += wrote * device->playback.channels * sizeof( float );
+        frames -= wrote;
+    } while ( frames > 0 && ::av_read_frame( ::Playing.Format, ::Playing.Packet ) == 0 ) {
+        if ( ::avcodec_send_packet( ::Playing.Codec, ::Playing.Packet ) < 0 || ::avcodec_receive_frame( ::Playing.Codec, ::Playing.Frame ) < 0 ) {
+            ::av_packet_unref( ::Playing.Packet );
+            ::av_frame_unref( ::Playing.Frame );
+
             continue;
+        }
 
         int conv = 0;
 
         if ( ::Playing.Frame->extended_data && ::Playing.Frame->nb_samples > 0 )
-            conv = ::swr_convert( ::Playing.SWR, &output, framecount, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples );
+            conv = ::swr_convert( ::Playing.SWR, &out, frames, ::Playing.Frame->extended_data, ::Playing.Frame->nb_samples );
+
+        out += conv * device->playback.channels * sizeof( float );
+        frames -= conv;
 
         ::av_packet_unref( ::Playing.Packet );
         ::av_frame_unref( ::Playing.Frame );
@@ -127,12 +138,13 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
             break;
     }
 
-    static int lastsecond = 0;
+    static int lastsecond;
+    ::cursor += framecount / ( double )device->sampleRate;
 
     if ( ::PauseDraw )
         ::ClearBars();
     else {
-        ::Waveform( ( double* )output, frames );
+        ::Waveform( ( double* )output, framecount );
 
         if ( lastsecond != ( int )::cursor )
             ::Redraw( ::DrawType::Redo );
