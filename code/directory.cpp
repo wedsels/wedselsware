@@ -7,7 +7,7 @@ struct Directory {
     mutable ::std::filesystem::directory_iterator it;
 };
 
-::std::vector< Directory > Directories = {};
+::std::vector< ::Directory > Directories = {};
 
 void UpdateDirectories( ::MSG& msg ) {
     static bool Updated;
@@ -18,7 +18,7 @@ void UpdateDirectories( ::MSG& msg ) {
     Updated = true;
     bool all = false;
 
-    for ( auto& dir : Directories ) {
+    for ( auto& dir : ::Directories ) {
         while ( !( all = dir.it == EndIt ) && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
             if ( dir.it->is_regular_file() && !dir.it->is_symlink() )
                 dir.add( dir.it->path().wstring().c_str() );
@@ -30,7 +30,7 @@ void UpdateDirectories( ::MSG& msg ) {
     }
 
     if ( Updated )
-        ::std::vector< Directory >().swap( Directories );
+        ::std::vector< ::Directory >().swap( ::Directories );
 }
 
 bool FileReady( const wchar_t* p ) {

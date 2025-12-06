@@ -68,7 +68,7 @@ namespace String {
     inline int Key( ::std::wstring& str, ::DWORD key ) {
         switch ( key ) {
             case VK_BACK: if ( str.size() > 0 ) str.pop_back(); return 2;
-            case VK_SPACE: str += L" "; return 0;
+            case VK_SPACE: str += L" "; return 1;
             case VK_DELETE: str.clear(); return 2;
             default:
                     if ( key >= '0' && key <= '9' || key >= 'A' && key <= 'Z' ) {

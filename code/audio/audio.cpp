@@ -61,11 +61,11 @@ void ArchiveSong( ::std::wstring path ) {
     for ( auto& i : artist )
         if ( i == L'\\' ) continue;
         else if ( i == L';' ) break;
-        else media.artist += i;
+        else media.artist += ::std::toupper( i );
     for ( auto& i : title )
         if ( i == L'\\' ) continue;
         else if ( i == L';' ) break;
-        else media.title += i;
+        else media.title += ::std::toupper( i );
 
     media.Duration = play.Duration;
     media.Size = play.Size;

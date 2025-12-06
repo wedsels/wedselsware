@@ -24,6 +24,8 @@ int lastportrait = -1;
     { ::SortTypes::Artist, L"Artist" }
 };
 
+bool SearchFind( ::uint32_t id ) { return ::songs[ id ].title.find( ::Searching ) != ::std::wstring::npos || ::songs[ id ].artist.find( ::Searching ) != ::std::wstring::npos; }
+
 struct Cover : ::UI {
     virtual ::uint8_t GetPriority() const { return 0; }
 
@@ -45,22 +47,26 @@ struct Cover : ::UI {
 
             if ( search )
                 c.key = []( int key ) {
-                    int type = ::String::Key( ::Searching, key );
-                    if ( type == 0 ) return;
+                    if ( ::Searching.empty() && ::Search.empty() )
+                        ::Search = ::display;
 
-                    for ( auto& i : type == 1 && ::Searching.size() > 1 ? ::Search : ::display ) {
-                        int index = ::Index( ::Search, i );
-                        bool find =
-                            ::String::SUpper( ::songs[ i ].title ).find( ::Searching ) != ::std::wstring::npos
-                            || ::String::SUpper( ::songs[ i ].artist ).find( ::Searching ) != ::std::wstring::npos;
-
-                        if ( index < 0 && find )
-                            ::Search.push_back( i );
-                        else if ( index > -1 && !find )
-                            ::Search.erase( ::Search.begin() + index );
-
-                        ::Sort();
+                    switch ( ::String::Key( ::Searching, key ) ) {
+                        case 0:
+                            return;
+                        case 1:
+                                for ( int i = ::Search.size() - 1; i >= 0; i-- )
+                                    if ( !::SearchFind( ::Search[ i ] ) )
+                                        ::Search.erase( ::Search.begin() + i );
+                            break;
+                        case 2:
+                                ::Search.clear();
+                                for ( int i = 0; i < ::display.size(); i++ )
+                                    if ( ::SearchFind( ::display[ i ] ) )
+                                        ::Search.push_back( ::display[ i ] );
+                            break;
                     }
+
+                    ::Sort();
                 };
 
             ::DrawImage(
