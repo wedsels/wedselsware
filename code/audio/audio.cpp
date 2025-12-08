@@ -57,9 +57,6 @@ void ArchiveSong( ::std::wstring p ) {
     ::media media = {};
     ::Play play = {};
 
-    for ( auto& i : p )
-        if ( i == '\\' )
-            i = '/';
     ::std::filesystem::path path( p );
 
     play.File = ::CreateFileW( path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
