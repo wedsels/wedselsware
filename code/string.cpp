@@ -16,7 +16,7 @@
 ::std::string String::CLower( char str[] ) {
     ::std::string string;
 
-    for ( size_t i = 0; str[ i ] != '\0'; ++i )
+    for ( ::size_t i = 0; str[ i ] != '\0'; ++i )
         string += ::std::tolower( str[ i ] );
 
     return string;
@@ -25,7 +25,7 @@
 ::std::string String::CUpper( char str[] ) {
     ::std::string string;
 
-    for ( size_t i = 0; str[ i ] != '\0'; ++i )
+    for ( ::size_t i = 0; str[ i ] != '\0'; ++i )
         string += ::std::toupper( str[ i ] );
 
     return string;

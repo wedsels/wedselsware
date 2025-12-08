@@ -1,7 +1,5 @@
 #include "audio.hpp"
 
-#include <fftw3.h>
-
 #include <array>
 
 constexpr int BANDS = WINHEIGHT / 2;

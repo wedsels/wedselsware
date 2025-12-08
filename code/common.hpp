@@ -36,6 +36,7 @@ struct Launch {
 };
 
 inline ::HWND hwnd;
+inline ::HWND desktophwnd;
 
 extern ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
 extern ::HRESULT InitializeMixer();
@@ -124,8 +125,8 @@ inline void Execute( ::std::wstring str, int type = 0 ) {
     ::PROCESS_INFORMATION pi = { 0 };
     ::STARTUPINFOW si = { 0 };
     si.cb = sizeof( si );
-    ::SetForegroundWindow( hwnd );
-    ::SetFocus( hwnd );
+    ::SetForegroundWindow( desktophwnd );
+    ::SetFocus( desktophwnd );
     ::CreateProcessW( NULL, ( ::LPWSTR )str.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi );
 }
 

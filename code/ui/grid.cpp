@@ -63,12 +63,13 @@ int lasttile = -1;
 void DefaultDisplay( ::uint32_t entry ) {
     ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };
     ::DisplayInformation[ 1 ] = [ entry ]() { return ::songs[ entry ].artist; };
-    ::DisplayInformation[ 2 ] = [ entry ]() { return ::songs[ entry ].encoding; };
-    ::DisplayInformation[ 3 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Duration, L"s" ); };
-    ::DisplayInformation[ 4 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Size, L"mb" ); };
-    ::DisplayInformation[ 5 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Bitrate, L"kbps" ); };
-    ::DisplayInformation[ 6 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Samplerate, L"Hz" ); };
-    ::DisplayInformation[ 7 ] = [ entry ]() { return ::String::WConcat( ::Saved::Volumes[ entry ], L"%" ); };
+    ::DisplayInformation[ 2 ] = [ entry ]() { return ::songs[ entry ].album; };
+    ::DisplayInformation[ 3 ] = [ entry ]() { return ::songs[ entry ].encoding; };
+    ::DisplayInformation[ 4 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Duration, L"s" ); };
+    ::DisplayInformation[ 5 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Size, L"mb" ); };
+    ::DisplayInformation[ 6 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Bitrate, L"kbps" ); };
+    ::DisplayInformation[ 7 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Samplerate, L"Hz" ); };
+    ::DisplayInformation[ 8 ] = [ entry ]() { return ::String::WConcat( ::Saved::Volumes[ entry ], L"%" ); };
 }
 
 void GetDisplay( ::uint32_t entry ) {

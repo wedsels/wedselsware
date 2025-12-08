@@ -19,7 +19,7 @@ struct Play {
     ::AVFrame* Frame;
     ::uint16_t Duration;
     ::uint8_t* Cover;
-    ::size_t Size;
+    ::HANDLE File;
     double Timebase;
     int Samplerate;
     int Bitrate;
@@ -30,6 +30,7 @@ inline Play Playing;
 struct media {
     ::std::wstring encoding;
     ::std::wstring artist;
+    ::std::wstring album;
     ::std::wstring title;
     ::std::wstring path;
     ::uint64_t write;
@@ -65,6 +66,8 @@ namespace Saved {
 inline ::std::vector< ::uint32_t > display = {};
 inline ::std::unordered_map< ::uint32_t, ::media > songs{};
 
+static const ::std::wstring SongPath = L"F:/SoundStuff/Sounds/";
+
 inline void Sort() {
     if ( ::GridType == ::GridTypes::Queue )
         return;
@@ -79,15 +82,12 @@ inline void Sort() {
             break;
         case ::SortTypes::Artist:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::String::SLower( ::songs[ a ].artist ) == ::String::SLower( ::songs[ b ].artist );
+                    return ::std::tie( songs[ a ].artist, songs[ a ].album, songs[ a ].title ) < ::std::tie( songs[ b ].artist, songs[ b ].album, songs[ b ].title );
                 } );
             break;
         case ::SortTypes::Title:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    int artist = ::String::SLower( ::songs[ a ].artist ) == ::String::SLower( ::songs[ b ].artist );
-                    if ( artist == 0 )
-                        return ::String::SLower( ::songs[ a ].title ) == ::String::SLower( ::songs[ b ].title );
-                    return artist < 0;
+                    return ::std::tie( songs[ a ].title, songs[ a ].artist, songs[ a ].album ) < ::std::tie( songs[ b ].title, songs[ b ].artist, songs[ b ].album );
                 } );
             break;
         default: break;
@@ -107,7 +107,7 @@ inline void Remove( ::uint32_t id ) {
     if ( ::songs.contains( id ) ) {
         ::delete[] ::songs[ id ].minicover;
         ::songs.erase( id );
-    }
+    } else return;
 
     int index;
 
@@ -132,6 +132,7 @@ inline void Clean( ::Play& Play ) {
     if ( Play.Codec ) ::avcodec_free_context( &Play.Codec );
     if ( Play.Packet ) ::av_packet_free( &Play.Packet );
     if ( Play.Frame ) ::av_frame_free( &Play.Frame );
+    if ( Play.File ) ::CloseHandle( Play.File );
     if ( Play.SWR ) ::swr_free( &Play.SWR );
 }
 
@@ -145,7 +146,7 @@ extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecou
 extern void SetVolume( double v = 0.0 );
 extern void ArchiveSong( ::std::wstring path );
 extern void SetSong( ::uint32_t song );
-extern ::HRESULT FFMPEG( ::std::wstring& path, ::Play& Playing );
+extern ::HRESULT FFMPEG( ::Play& Playing );
 extern ::HRESULT SetDefaultDevice();
 
 namespace queue {

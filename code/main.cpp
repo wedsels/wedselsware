@@ -79,6 +79,8 @@ void Load() {
 }
 
 ::HWND Window( ::HINSTANCE hInstance ) {
+    ::SetProcessDpiAwarenessContext( DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE );
+
     ::WNDCLASSW wc = { 0 };
     wc.lpfnWndProc = ::WndProc;
     wc.hInstance = hInstance;
@@ -88,7 +90,7 @@ void Load() {
     ::RegisterClassW( &wc );
 
     ::HWND hwnd = ::CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW,
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW,
         wc.lpszClassName,
         wc.lpszClassName,
         WS_POPUP | WS_VISIBLE,
@@ -96,7 +98,7 @@ void Load() {
         nullptr, nullptr, hInstance, nullptr
     );
 
-    ::SetProcessDpiAwarenessContext( DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE );
+    ::SetWindowLongW( hwnd, GWL_EXSTYLE, ::GetWindowLongW( hwnd, GWL_EXSTYLE ) | WS_EX_NOACTIVATE );
     ::SetLayeredWindowAttributes( hwnd, 0, 255, LWA_ALPHA );
     ::SetWindowPos( hwnd, HWND_TOPMOST, WINLEFT, WINTOP, WINWIDTH, WINHEIGHT, SWP_NOACTIVATE );
     ::ShowWindow( hwnd, SW_SHOW );
@@ -123,12 +125,13 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::Load();
 
     ::hwnd = ::Window( hInstance );
+    ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
 
     HER( ::CoInitialize( NULL ) );
 // WHEN ADDING FILES IT IS NOT DONE IN BETWEEN THREAD UPDATES, BUT INSTEAD CONSUMES THE WHOLE TRHEAD
     HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Apps, ::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Apps, ::AppsPath ); } ) );
     HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Webs, ::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Webs, ::WebsPath ); } ) );
-    HER( ::InitializeDirectory( L"F:/SoundStuff/Sounds/", ::ArchiveSong, ::Remove ) );
+    HER( ::InitializeDirectory( SongPath.c_str(), ::ArchiveSong, ::Remove ) );
 
     HER( ::InitializeFont() );
     HER( ::InitGraphics() );

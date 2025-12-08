@@ -9,6 +9,24 @@ struct Directory {
 
 ::std::vector< ::Directory > Directories = {};
 
+bool IterateDirectory( ::MSG& msg, ::Directory& dir, const ::std::filesystem::path& path ) {
+    if ( ::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) )
+        return true;
+
+    if ( ::std::filesystem::is_regular_file( path ) && !::std::filesystem::is_symlink( path ) )
+        dir.add( path.wstring().c_str() );
+    else if ( ::std::filesystem::is_directory( path ) ) {
+        for ( const auto& entry : ::std::filesystem::directory_iterator( path ) )
+            if ( ::IterateDirectory( msg, dir, entry.path() ) )
+                return true;
+
+        if ( ::std::filesystem::is_empty( path ) )
+            ::std::filesystem::remove( path );
+    }
+
+    return false;
+}
+
 void UpdateDirectories( ::MSG& msg ) {
     static bool Updated;
     static ::std::filesystem::directory_iterator EndIt;
@@ -19,12 +37,8 @@ void UpdateDirectories( ::MSG& msg ) {
     bool all = false;
 
     for ( auto& dir : ::Directories ) {
-        while ( !( all = dir.it == EndIt ) && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
-            if ( dir.it->is_regular_file() && !dir.it->is_symlink() )
-                dir.add( dir.it->path().wstring().c_str() );
-
+        while ( !( all = dir.it == EndIt ) && !::IterateDirectory( msg, dir, dir.it->path() ) )
             ++dir.it;
-        }
 
         Updated &= all;
     }
@@ -111,7 +125,7 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
 }
 
 ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
-    ::Directory dir = { path, add, remove, ::std::filesystem::directory_iterator( path ) };
+    ::Directory dir = { path, add, remove, ::std::filesystem::directory_iterator( path, std::filesystem::directory_options::skip_permission_denied ) };
     Directories.push_back( dir );
 
     THREAD(
