@@ -28,20 +28,20 @@ struct Play {
 inline Play Playing;
 
 struct media {
-    ::std::wstring encoding;
-    ::std::wstring artist;
-    ::std::wstring album;
-    ::std::wstring title;
-    ::std::wstring path;
-    ::uint64_t write;
-    ::uint32_t id;
+    ::std::wstring Encoding;
+    ::std::wstring Artist;
+    ::std::wstring Album;
+    ::std::wstring Title;
+    ::std::wstring Path;
+    ::uint64_t Write;
+    ::uint32_t ID;
     ::uint16_t Duration;
-    ::uint8_t* minicover;
+    ::uint8_t* Minicover;
     ::size_t Size;
     int Samplerate;
     int Bitrate;
 
-    bool operator==( const ::media& m ) const { return id == m.id; }
+    bool operator==( const ::media& m ) const { return ID == m.ID; }
 };
 
 enum struct Playback { Linear, Repeat, Shuffle, Queue, Count };
@@ -77,17 +77,17 @@ inline void Sort() {
     switch ( ::Saved::Sorting ) {
         case ::SortTypes::Time:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::songs[ a ].write < ::songs[ b ].write;
+                    return ::songs[ a ].Write < ::songs[ b ].Write;
                 } );
             break;
         case ::SortTypes::Artist:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::std::tie( songs[ a ].artist, songs[ a ].album, songs[ a ].title ) < ::std::tie( songs[ b ].artist, songs[ b ].album, songs[ b ].title );
+                    return ::std::tie( songs[ a ].Artist, songs[ a ].Album, songs[ a ].Title ) < ::std::tie( songs[ b ].Artist, songs[ b ].Album, songs[ b ].Title );
                 } );
             break;
         case ::SortTypes::Title:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::std::tie( songs[ a ].title, songs[ a ].artist, songs[ a ].album ) < ::std::tie( songs[ b ].title, songs[ b ].artist, songs[ b ].album );
+                    return ::std::tie( songs[ a ].Title, songs[ a ].Artist, songs[ a ].Album ) < ::std::tie( songs[ b ].Title, songs[ b ].Artist, songs[ b ].Album );
                 } );
             break;
         default: break;
@@ -105,7 +105,7 @@ inline ::std::mutex PlayerMutex;
 
 inline void Remove( ::uint32_t id ) {
     if ( ::songs.contains( id ) ) {
-        ::delete[] ::songs[ id ].minicover;
+        ::delete[] ::songs[ id ].Minicover;
         ::songs.erase( id );
     } else return;
 

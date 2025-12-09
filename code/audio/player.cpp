@@ -21,46 +21,45 @@ void Seek( int time ) {
 }
 
 void Waveform( double* data, ::uint32_t frames ) {
-    double samplesPerBar = ( double )frames / ::BANDS;
-    ::std::vector< double > barAmplitudes( ::BANDS, 0.0 );
+    double samples = ( double )frames / ::BANDS;
+    ::std::vector< double > amplitudes( ::BANDS, 0.0 );
 
     for ( int bar = 0; bar < ::BANDS; ++bar ) {
-        int startSampleF = ::std::floor( bar * samplesPerBar );
-        int endSampleF = ::std::ceil( ( bar + 1 ) * samplesPerBar );
+        int start = ::std::floor( bar * samples );
+        int end = ::std::ceil( ( bar + 1 ) * samples );
 
-        double sumAmplitude = 0.0;
+        double sum = 0.0;
         int count = 0;
 
-        for ( int i = startSampleF; i < endSampleF && i < frames; ++i ) {
-            sumAmplitude += ::std::abs( data[ i ] );
+        for ( int i = start; i < end && i < frames; ++i ) {
+            sum += ::std::abs( data[ i ] );
             ++count;
         }
 
         if ( count > 0 )
-            barAmplitudes[ bar ] = sumAmplitude / count;
+            amplitudes[ bar ] = sum / count;
     }
 
-    static double smoothedAmplitudes[ ::BANDS ];
-    constexpr double smoothingFactor = 0.25;
+    static double smooth[ ::BANDS ];
+    static const double smoothfactor = 0.25;
 
     for ( int i = 0; i < ::BANDS; ++i ) {
-        smoothedAmplitudes[ i ] =
-            smoothingFactor * barAmplitudes[ i ] + ( 1.0 - smoothingFactor ) * smoothedAmplitudes[ i ];
-        barAmplitudes[ i ] = smoothedAmplitudes[ i ];
+        smooth[ i ] =
+            smoothfactor * amplitudes[ i ] + ( 1.0 - smoothfactor ) * smooth[ i ];
+        amplitudes[ i ] = smooth[ i ];
     }
 
-    static double globalMaxAmplitude = 0.00000001;
-    constexpr double decayRate = 0.9;
+    static double max = 0.00000001;
+    static const double decay = 0.9;
 
-    double maxAmplitude = *::std::max_element( barAmplitudes.begin(), barAmplitudes.end() );
-    globalMaxAmplitude = ::std::max( globalMaxAmplitude * decayRate, maxAmplitude );
+    max = ::std::max( max * decay, *::std::max_element( amplitudes.begin(), amplitudes.end() ) );
 
-    if ( globalMaxAmplitude > 0 )
-        for ( auto& amp : barAmplitudes )
-            amp /= globalMaxAmplitude;
+    if ( max > 0 )
+        for ( auto& amp : amplitudes )
+            amp /= max;
 
     for ( int i = 0; i < ::BANDS; ++i ) {
-        int w = ::std::clamp( WINWIDTH / 2.0 * ( barAmplitudes[ i ] * 0.5 ) * ::Saved::Volumes[ ::Saved::Playing ], 1.0, ( WINWIDTH - ::MIDPOINT ) / 2.0 );
+        int w = ::std::clamp( WINWIDTH / 2.0 * ( amplitudes[ i ] * 0.5 ) * ::Saved::Volumes[ ::Saved::Playing ], 1.0, ( WINWIDTH - ::MIDPOINT ) / 2.0 );
 
         if ( w == ::Bands[ i ] )
             continue;

@@ -10,6 +10,9 @@
 
 void Save() {
     ::Serializer s;
+    if ( !s.file )
+        return;
+
     s.write( ::Saved::Playing );
     s.write( ::Saved::Sorting );
     s.write( ::Saved::Playback );
@@ -20,6 +23,9 @@ void Save() {
 
 void Load() {
     ::Deserializer d;
+    if ( !d.file )
+        return;
+
     d.read( ::Saved::Playing );
     d.read( ::Saved::Sorting );
     d.read( ::Saved::Playback );

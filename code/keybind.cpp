@@ -5,7 +5,7 @@ namespace Input {
     ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey = {
         { VK_HOME, []( bool down ) {
             if ( down ) {
-                if ( ::Input::State::ctrl )
+                if ( ::Input::State[ VK_CONTROL ] )
                     if ( ( ::PauseDraw = !::PauseDraw ) )
                         ::InitiateDraw();
                     else ::Draw( ::DrawType::Redo );
@@ -20,7 +20,7 @@ namespace Input {
         } },
         { VK_PRIOR, []( bool down ) {
             if ( down ) {
-                if ( ::Input::State::ctrl )
+                if ( ::Input::State[ VK_CONTROL ] )
                     ::queue::next( 1 );
                 else
                     ::SetVolume( 0.05 );
@@ -30,7 +30,7 @@ namespace Input {
         } },
         { VK_NEXT, []( bool down ) {
             if ( down ) {
-                if ( ::Input::State::ctrl )
+                if ( ::Input::State[ VK_CONTROL ] )
                     ::queue::next( -1 );
                 else
                     ::SetVolume( -0.05 );
@@ -40,11 +40,11 @@ namespace Input {
         } },
         { VK_CAPITAL, []( bool down ) {
             if ( !down ) {
-                if ( ::Input::State::ctrl )
+                if ( ::Input::State[ VK_CONTROL ] )
                     ::Execute( L"cmd.exe", 2 );
-                else if ( ::Input::State::alt )
+                else if ( ::Input::State[ VK_MENU ] )
                     ::SetDefaultDevice();
-                else if ( ::Input::State::shift )
+                else if ( ::Input::State[ VK_SHIFT ] )
                     ::Seek( 0 );
                 else
                     ::Execute( L"C:\\Program Files\\Mozilla Firefox\\firefox.exe" );
@@ -52,12 +52,6 @@ namespace Input {
 
             return true;
         } },
-        { VK_END, []( bool down ) { if ( down ) ::Input::passthrough = !::Input::passthrough; return true; } },
-        { VK_LMENU, []( bool down ) { ::Input::State::alt = down; return false; } },
-        { VK_RMENU, []( bool down ) { ::Input::State::alt = down; return false; } },
-        { VK_LSHIFT, []( bool down ) { ::Input::State::shift = down; return false; } },
-        { VK_RSHIFT, []( bool down ) { ::Input::State::shift = down; return false; } },
-        { VK_LCONTROL, []( bool down ) { ::Input::State::ctrl = down; return false; } },
-        { VK_RCONTROL, []( bool down ) { ::Input::State::ctrl = down; return false; } }
+        { VK_END, []( bool down ) { if ( down ) ::Input::passthrough = !::Input::passthrough; return true; } }
     };
 }

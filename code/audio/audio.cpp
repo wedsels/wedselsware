@@ -11,23 +11,19 @@ void SetSong( ::uint32_t song ) {
     ::Clean( ::Playing );
 
     auto& s = ::songs[ song ];
-    ::Playing.File = ::CreateFileW( s.path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+    ::Playing.File = ::CreateFileW( s.Path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 
-    if ( FAILED( ::FFMPEG( ::Playing ) ) ) {
-        ::std::wcout<<s.path<<"\n";
-        ::Clean( ::Playing );
+    if ( FAILED( ::FFMPEG( ::Playing ) ) )
+        return::Clean( ::Playing );
 
-        return;
-    }
-
-    ::Saved::Playing = s.id;
+    ::Saved::Playing = s.ID;
     ::SetVolume();
     ::swr_inject_silence( ::Playing.SWR, ::Device.sampleRate / 100 * 2 );
 
     ::cursor = 0;
     ::Redraw( ::DrawType::Redo );
 
-    ::DisplayOffset = ::Index( ::display, s.id );
+    ::DisplayOffset = ::Index( ::display, s.ID );
 }
 
 ::std::wstring NormalizeString( char str[] ) {
@@ -51,7 +47,8 @@ void ArchiveSong( ::std::wstring p ) {
         if ( i == L'\\' )
             i = L'/';
 
-    if ( ::songs.contains( ::String::Hash( p ) ) )
+    ::uint32_t pid = ::String::Hash( p );
+    if ( ::songs.contains( pid ) && ::songs[ pid ].ID )
         return;
 
     ::media media = {};
@@ -63,42 +60,42 @@ void ArchiveSong( ::std::wstring p ) {
     if ( !play.File )
         return::Clean( play );
 
-    ::FILETIME creationTime;
-    ::GetFileTime( play.File, &creationTime, nullptr, nullptr );
+    ::FILETIME time;
+    ::GetFileTime( play.File, &time, nullptr, nullptr );
     ::ULARGE_INTEGER ul;
-    ul.LowPart = creationTime.dwLowDateTime;
-    ul.HighPart = creationTime.dwHighDateTime;
-    media.write = ul.QuadPart / 10000;
+    ul.LowPart = time.dwLowDateTime;
+    ul.HighPart = time.dwHighDateTime;
+    media.Write = ul.QuadPart / 10000;
 
     if ( FAILED( ::FFMPEG( play ) ) )
         return::Clean( play );
 
-    media.artist = L"_";
-    media.title = L"_";
-    media.album = L"_";
+    media.Artist = L"_";
+    media.Title = L"_";
+    media.Album = L"_";
 
     ::AVDictionary* metadata = play.Format->metadata;
     ::AVDictionaryEntry* tag = nullptr;
     while ( ( tag = ::av_dict_get( metadata, "", tag, AV_DICT_IGNORE_SUFFIX ) ) )
         if ( ::_stricmp( tag->key, "ARTIST" ) == 0 )
-            media.artist = ::NormalizeString( tag->value );
+            media.Artist = ::NormalizeString( tag->value );
         else if ( ::_stricmp( tag->key, "TITLE" ) == 0 )
-            media.title = ::NormalizeString( tag->value );
+            media.Title = ::NormalizeString( tag->value );
         else if ( ::_stricmp( tag->key, "ALBUM" ) == 0 )
-            media.album = ::NormalizeString( tag->value );
+            media.Album = ::NormalizeString( tag->value );
 
-    media.encoding = path.extension().wstring();
+    media.Encoding = path.extension().wstring();
 
-    ::std::wstring dir = ::String::WConcat( SongPath, media.artist, L"/", media.album, L"/" );
+    ::std::wstring dir = ::String::WConcat( SongPath, media.Artist, L"/", media.Album, L"/" );
 
     if ( !::std::filesystem::is_directory( dir ) )
         ::std::filesystem::create_directories( dir );
 
-    ::std::wstring name = ::String::WConcat( media.title, media.encoding );
+    ::std::wstring name = ::String::WConcat( media.Title, media.Encoding );
     ::std::wstring expected = ::String::WConcat( dir, name );
 
     if ( path.wstring() != expected && ::std::filesystem::exists( ::String::WConcat( dir, name ) ) )
-        expected = ::String::WConcat( dir, media.title, L" - ", media.write, media.encoding );
+        expected = ::String::WConcat( dir, media.Title, L" - ", media.Write, media.Encoding );
 
     for ( auto& i : expected )
         if ( i == L'\\' )
@@ -107,37 +104,63 @@ void ArchiveSong( ::std::wstring p ) {
     if ( path.wstring() != expected )
         ::std::filesystem::rename( path.wstring(), expected );
 
-    media.id = ::String::Hash( expected );
-
-    media.Duration = play.Duration;
-    media.Size = ::std::filesystem::file_size( expected ) / 1000000;
     media.Samplerate = play.Samplerate;
+    media.Duration = play.Duration;
     media.Bitrate = play.Bitrate;
-    media.path = expected;
+    media.Path = expected;
+    media.Size = ::std::filesystem::file_size( expected ) / 1000000;
+    media.ID = ::String::Hash( expected );
 
-    media.minicover = ::ResizeImage( play.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
+    media.Minicover = ::ResizeImage( play.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
     ::Clean( play );
 
-    if ( ::Saved::Volumes.find( media.id ) == ::Saved::Volumes.end() )
-        ::Saved::Volumes[ media.id ] = 0.2;
+    if ( ::Saved::Volumes.find( media.ID ) == ::Saved::Volumes.end() )
+        ::Saved::Volumes[ media.ID ] = 0.2;
 
-    ::songs[ media.id ] = media;
-    ::display.push_back( media.id );
+    ::songs[ media.ID ] = media;
+    ::display.push_back( media.ID );
 
-    if ( media.id == ::Saved::Playing )
-        ::SetSong( media.id );
+    if ( media.ID == ::Saved::Playing )
+        ::SetSong( media.ID );
 
     ::Sort();
     ::Draw( ::DrawType::Redo );
 }
 
-static int rpacket( void* opaque, ::uint8_t* buf, int buf_size ) {
+static int rpacket( void* opaque, ::uint8_t* buf, int bufsize ) {
     ::DWORD bytes = 0;
 
-    if ( !::ReadFile( ( ::HANDLE )opaque, buf, buf_size, &bytes, NULL ) || bytes <= 0 )
+    if ( !::ReadFile( ( ::HANDLE )opaque, buf, bufsize, &bytes, NULL ) || bytes <= 0 )
         return AVERROR_EOF;
 
     return bytes;
+}
+
+::int64_t spacket( void* opaque, ::int64_t offset, int whence ) {
+    ::HANDLE file = ( ::HANDLE )opaque;
+
+    if ( whence == AVSEEK_SIZE ) {
+        ::LARGE_INTEGER size;
+        if ( !::GetFileSizeEx( file, &size ) )
+            return -1;
+        return size.QuadPart;
+    }
+
+    ::DWORD moveMethod;
+    switch ( whence ) {
+        case SEEK_SET: moveMethod = FILE_BEGIN; break;
+        case SEEK_CUR: moveMethod = FILE_CURRENT; break;
+        case SEEK_END: moveMethod = FILE_END; break;
+        default: return -1;
+    }
+
+    ::LARGE_INTEGER in, out;
+    in.QuadPart = offset;
+
+    if ( !::SetFilePointerEx( file, in, &out, moveMethod ) )
+        return -1;
+
+    return out.QuadPart;
 }
 
 ::HRESULT FFMPEG( ::Play& play ) {
@@ -149,7 +172,7 @@ static int rpacket( void* opaque, ::uint8_t* buf, int buf_size ) {
     if ( !buffer )
         return E_FAIL;
 
-    ::AVIOContext* avioCtx = ::avio_alloc_context( buffer, bsize, 0, play.File, &::rpacket, nullptr, nullptr );
+    ::AVIOContext* avioCtx = ::avio_alloc_context( buffer, bsize, 0, play.File, &::rpacket, nullptr, &::spacket );
     if ( !avioCtx )
         return E_FAIL;
 

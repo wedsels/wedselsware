@@ -9,22 +9,16 @@ struct Directory {
 
 ::std::vector< ::Directory > Directories = {};
 
-bool IterateDirectory( ::MSG& msg, ::Directory& dir, const ::std::filesystem::path& path ) {
-    if ( ::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) )
-        return true;
-
+void IterateDirectory( ::MSG& msg, ::Directory& dir, const ::std::filesystem::path& path ) {
     if ( ::std::filesystem::is_regular_file( path ) && !::std::filesystem::is_symlink( path ) )
         dir.add( path.wstring().c_str() );
     else if ( ::std::filesystem::is_directory( path ) ) {
         for ( const auto& entry : ::std::filesystem::directory_iterator( path ) )
-            if ( ::IterateDirectory( msg, dir, entry.path() ) )
-                return true;
+            ::IterateDirectory( msg, dir, entry.path() );
 
         if ( ::std::filesystem::is_empty( path ) )
             ::std::filesystem::remove( path );
     }
-
-    return false;
 }
 
 void UpdateDirectories( ::MSG& msg ) {
@@ -37,14 +31,19 @@ void UpdateDirectories( ::MSG& msg ) {
     bool all = false;
 
     for ( auto& dir : ::Directories ) {
-        while ( !( all = dir.it == EndIt ) && !::IterateDirectory( msg, dir, dir.it->path() ) )
+        while ( !( all = dir.it == EndIt ) && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
+            ::IterateDirectory( msg, dir, dir.it->path() );
             ++dir.it;
+        }
 
         Updated &= all;
     }
 
-    if ( Updated )
+    if ( Updated ) {
         ::std::vector< ::Directory >().swap( ::Directories );
+        ::std::wcout<<::songs.size()<<"\n";
+        ::std::wcout<<::display.size()<<"\n";
+    }
 }
 
 bool FileReady( const wchar_t* p ) {

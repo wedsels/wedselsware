@@ -24,8 +24,6 @@ int lastportrait = -1;
     { ::SortTypes::Artist, L"Artist" }
 };
 
-bool SearchFind( ::uint32_t id ) { return ::songs[ id ].title.find( ::Searching ) != ::std::wstring::npos || ::songs[ id ].artist.find( ::Searching ) != ::std::wstring::npos; }
-
 struct Cover : ::UI {
     virtual ::uint8_t GetPriority() const { return 0; }
 
@@ -36,9 +34,9 @@ struct Cover : ::UI {
             ::Rect rect { 0, WINHEIGHT - ::MIDPOINT, ::MIDPOINT };
 
             ::Input::Click c {
-                .lmb = []() { ::EnumNext( ::GridType, ::Input::State::shift ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
-                .rmb = []() { ::EnumNext( ::Saved::Playback, ::Input::State::shift ); },
-                .mmb = []() { ::EnumNext( ::Saved::Sorting, ::Input::State::shift ); ::Sort(); },
+                .lmb = []() { ::EnumNext( ::GridType, ::Input::State[ VK_SHIFT ] ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
+                .rmb = []() { ::EnumNext( ::Saved::Playback, ::Input::State[ VK_SHIFT ] ); },
+                .mmb = []() { ::EnumNext( ::Saved::Sorting, ::Input::State[ VK_SHIFT ] ); ::Sort(); },
                 .xmb = []( int d ) { ::queue::next( d ); },
                 .scrl = []( int s ) { ::SetVolume( s * -0.001 ); }
             };
@@ -55,13 +53,13 @@ struct Cover : ::UI {
                             return;
                         case 1:
                                 for ( int i = ::Search.size() - 1; i >= 0; i-- )
-                                    if ( !::SearchFind( ::Search[ i ] ) )
+                                    if ( ::songs[ ::Search[ i ] ].Path.find( ::Searching ) == ::std::wstring::npos )
                                         ::Search.erase( ::Search.begin() + i );
                             break;
                         case 2:
                                 ::Search.clear();
                                 for ( int i = 0; i < ::display.size(); i++ )
-                                    if ( ::SearchFind( ::display[ i ] ) )
+                                    if ( ::songs[ ::display[ i ] ].Path.find( ::Searching ) != ::std::wstring::npos )
                                         ::Search.push_back( ::display[ i ] );
                             break;
                     }

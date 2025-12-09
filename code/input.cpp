@@ -15,7 +15,7 @@ void Mouse( int c, ::LPARAM l ) {
 
                 if ( !::Input::hover.empty() ) {
                     ESAFECALL( hvr );
-                    if ( o != ::Input::hover && ::Input::State::lmb )
+                    if ( o != ::Input::hover && ::Input::State[ VK_LBUTTON ] )
                         ESAFECALL( lmb );
                 }
         }   break;
@@ -58,6 +58,11 @@ void Keyboard( int c, ::LPARAM l ) {
             ::DWORD key = ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode;
             bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
 
+            ::Input::State[ key ] = down;
+            ::Input::State[ VK_MENU ] = ::Input::State[ VK_LMENU ] || ::Input::State[ VK_RMENU ];
+            ::Input::State[ VK_SHIFT ] = ::Input::State[ VK_LSHIFT ] || ::Input::State[ VK_RSHIFT ];
+            ::Input::State[ VK_CONTROL ] = ::Input::State[ VK_LCONTROL ] || ::Input::State[ VK_RCONTROL ];
+
             if ( auto it = ::Input::globalkey.find( key ); it != ::Input::globalkey.end() )
                 if ( it->second( down ) ) {
                     ::Redraw( ::DrawType::Redo );
@@ -86,27 +91,27 @@ void Keyboard( int c, ::LPARAM l ) {
                         ::Message( WM_MOUSE, wParam, reinterpret_cast< ::WPARAM >( &over ) );
             }   break;
             case WM_LBUTTONDOWN:
-                    ::Input::State::lmb = true;
+                    ::Input::State[ VK_LBUTTON ] = true;
                     BLOCKCALL( lmb, WM_MOUSE, 0 );
                 break;
             case WM_LBUTTONUP:
-                    ::Input::State::lmb = false;
+                    ::Input::State[ VK_LBUTTON ] = false;
                     BLOCKCALL( lmb, WM_MOUSE, 0 );
                 break;
             case WM_RBUTTONDOWN:
-                    ::Input::State::rmb = true;
+                    ::Input::State[ VK_RBUTTON ] = true;
                     BLOCKCALL( rmb, WM_MOUSE, 0 );
                 break;
             case WM_RBUTTONUP:
-                    ::Input::State::rmb = false;
+                    ::Input::State[ VK_RBUTTON ] = false;
                     BLOCKCALL( rmb, WM_MOUSE, 0 );
                 break;
             case WM_MBUTTONDOWN:
-                    ::Input::State::mmb = true;
+                    ::Input::State[ VK_MBUTTON ] = true;
                     BLOCKCALL( mmb, WM_MOUSE, 0 );
                 break;
             case WM_MBUTTONUP:
-                    ::Input::State::mmb = false;
+                    ::Input::State[ VK_MBUTTON ] = false;
                     BLOCKCALL( mmb, WM_MOUSE, 0 );
                 break;
             case WM_XBUTTONDOWN:

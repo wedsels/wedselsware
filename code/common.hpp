@@ -198,14 +198,7 @@ namespace Input {
 
     inline bool passthrough;
 
-    namespace State {
-        inline ::std::atomic< bool > lmb;
-        inline ::std::atomic< bool > rmb;
-        inline ::std::atomic< bool > mmb;
-        inline ::std::atomic< bool > shift;
-        inline ::std::atomic< bool > ctrl;
-        inline ::std::atomic< bool > alt;
-    };
+    inline ::std::atomic< bool > State[ VK_OEM_CLEAR ];
 
     inline ::POINT mouse;
 

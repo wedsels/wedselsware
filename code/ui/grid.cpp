@@ -27,7 +27,7 @@ int lasttile = -1;
         case ::GridTypes::Mixer: return ::MixerEntries[ entry ].minicover;
         case ::GridTypes::Apps: return ::AppsPath[ entry ].img;
         case ::GridTypes::Webs: return ::WebsPath[ entry ].img;
-        default: return ::songs[ entry ].minicover;
+        default: return ::songs[ entry ].Minicover;
     }
 }
 
@@ -42,17 +42,17 @@ int lasttile = -1;
         default:
             return {
                 .lmb = [ entry ]() {
-                    ::uint32_t id = ::songs[ entry ].id;
+                    ::uint32_t id = ::songs[ entry ].ID;
                     int index = ::Index( ::Saved::Queue, id );
 
-                    if ( ::Input::State::shift )
+                    if ( ::Input::State[ VK_SHIFT ] )
                         ::queue::set( id, ::Index( ::Saved::Queue, id ) > -1 ? 0 : 1 );
                     else if ( ::GridType == ::GridTypes::Queue && index > -1 )
                         ::Saved::Queue.erase( ::Saved::Queue.begin() + index );
                     else
                         ::queue::add( id, 1 );
                 },
-                .rmb = [ entry ]() { ::Execute( ::songs[ entry ].path, 1 ); },
+                .rmb = [ entry ]() { ::Execute( ::songs[ entry ].Path, 1 ); },
                 .mmb = []() { ::queue::clear(); },
                 .xmb = []( int d ) { ::queue::next( d ); },
                 .scrl = []( int s ) { ::DisplayOffset += s; }
@@ -61,10 +61,10 @@ int lasttile = -1;
 }
 
 void DefaultDisplay( ::uint32_t entry ) {
-    ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].title; };
-    ::DisplayInformation[ 1 ] = [ entry ]() { return ::songs[ entry ].artist; };
-    ::DisplayInformation[ 2 ] = [ entry ]() { return ::songs[ entry ].album; };
-    ::DisplayInformation[ 3 ] = [ entry ]() { return ::songs[ entry ].encoding; };
+    ::DisplayInformation[ 0 ] = [ entry ]() { return ::songs[ entry ].Title; };
+    ::DisplayInformation[ 1 ] = [ entry ]() { return ::songs[ entry ].Artist; };
+    ::DisplayInformation[ 2 ] = [ entry ]() { return ::songs[ entry ].Album; };
+    ::DisplayInformation[ 3 ] = [ entry ]() { return ::songs[ entry ].Encoding; };
     ::DisplayInformation[ 4 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Duration, L"s" ); };
     ::DisplayInformation[ 5 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Size, L"mb" ); };
     ::DisplayInformation[ 6 ] = [ entry ]() { return ::String::WConcat( ::songs[ entry ].Bitrate, L"kbps" ); };
