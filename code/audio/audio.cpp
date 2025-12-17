@@ -6,15 +6,18 @@ void SetSong( ::uint32_t song ) {
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
     if ( !::songs.contains( song ) )
-        return;
+        return::Remove( song );
 
     ::Clean( ::Playing );
 
     auto& s = ::songs[ song ];
     ::Playing.File = ::CreateFileW( s.Path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 
-    if ( FAILED( ::FFMPEG( ::Playing ) ) )
-        return::Clean( ::Playing );
+    if ( FAILED( ::FFMPEG( ::Playing ) ) ) {
+        ::Clean( ::Playing );
+        ::Remove( song );
+        return;
+    }
 
     ::Saved::Playing = s.ID;
     ::SetVolume();
@@ -43,9 +46,7 @@ void SetSong( ::uint32_t song ) {
 }
 
 void ArchiveSong( ::std::wstring p ) {
-    for ( auto& i : p )
-        if ( i == L'\\' )
-            i = L'/';
+    ::Path( p );
 
     ::uint32_t pid = ::String::Hash( p );
     if ( ::songs.contains( pid ) && ::songs[ pid ].ID )
@@ -97,9 +98,7 @@ void ArchiveSong( ::std::wstring p ) {
     if ( path.wstring() != expected && ::std::filesystem::exists( ::String::WConcat( dir, name ) ) )
         expected = ::String::WConcat( dir, media.Title, L" - ", media.Write, media.Encoding );
 
-    for ( auto& i : expected )
-        if ( i == L'\\' )
-            i = L'/';
+    ::Path( expected );
 
     if ( path.wstring() != expected )
         ::std::filesystem::rename( path.wstring(), expected );
@@ -194,7 +193,7 @@ static int rpacket( void* opaque, ::uint8_t* buf, int bufsize ) {
 
         if ( !stream || !stream->codecpar )
             continue;
-    
+
         auto id = stream->codecpar->codec_id;
         if ( id == ::AV_CODEC_ID_MJPEG
             || id == ::AV_CODEC_ID_PNG

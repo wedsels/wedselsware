@@ -64,7 +64,7 @@ void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< 
 void Render( ::DrawType dt ) {
     for ( ::UI* i : ::UI::Registry() )
         i->Draw( dt );
-    
+
     ::InitiateDraw();
 }
 

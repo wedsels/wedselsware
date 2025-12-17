@@ -245,7 +245,7 @@ bool lastpause = false;
 
             if ( ::lastpause != ::PauseDraw ) {
                 ::lastpause = ::PauseDraw;
-                
+
                 ::Input::clicks.clear();
                 for ( ::size_t i = 0; i < WINWIDTH * WINHEIGHT; ++i )
                     ::Canvas[ i ] = COLORALPHA;

@@ -66,7 +66,7 @@
     for ( auto& i : p )
         if ( i == '/' )
             i = '\\';
-    
+
     if ( !p.contains( L".exe" ) )
         return nullptr;
 

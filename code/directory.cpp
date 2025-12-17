@@ -1,5 +1,7 @@
 #include "audio/audio.hpp"
 
+#include <ranges>
+
 struct Directory {
     const wchar_t* path;
     ::std::function< void( const wchar_t* ) > add;
@@ -39,11 +41,8 @@ void UpdateDirectories( ::MSG& msg ) {
         Updated &= all;
     }
 
-    if ( Updated ) {
+    if ( Updated )
         ::std::vector< ::Directory >().swap( ::Directories );
-        ::std::wcout<<::songs.size()<<"\n";
-        ::std::wcout<<::display.size()<<"\n";
-    }
 }
 
 bool FileReady( const wchar_t* p ) {
@@ -131,12 +130,23 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
         ::WatchDirectory( dir.path, [ = ]( int action, const wchar_t* name ) {
             ::std::function< void() > func = [ = ]() {
                 ::std::wstring fpath = ::String::WConcat( dir.path, name );
+                ::Path( fpath );
 
                 if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME ) {
-                    if ( ::FileReady( fpath.c_str() ) )
+                    if ( ::std::filesystem::is_directory( fpath ) ) {
+                        for ( auto& i : ::std::filesystem::recursive_directory_iterator( fpath ) )
+                            if ( i.is_regular_file() && !i.is_symlink() )
+                                dir.add( i.path().wstring().c_str() );
+                    } else if ( ::FileReady( fpath.c_str() ) )
                         dir.add( fpath.c_str() );
-                } else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME )
-                    dir.remove( ::String::Hash( fpath ) );
+                } else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME ) {
+                    if ( ::songs.contains( ::String::Hash( fpath ) ) )
+                        dir.remove( ::String::Hash( fpath ) );
+                    else
+                        for ( auto& i : ::songs | ::std::views::reverse )
+                            if ( i.second.Path.find( fpath ) != ::std::string::npos )
+                                dir.remove( i.first );
+                }
             };
 
             ::SendMessageW( hwnd, WM_ACTION, ( ::WPARAM )&func, 0 );

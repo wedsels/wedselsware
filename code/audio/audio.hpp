@@ -107,7 +107,7 @@ inline void Remove( ::uint32_t id ) {
     if ( ::songs.contains( id ) ) {
         ::delete[] ::songs[ id ].Minicover;
         ::songs.erase( id );
-    } else return;
+    }
 
     int index;
 

@@ -52,9 +52,16 @@ struct Cover : ::UI {
                         case 0:
                             return;
                         case 1:
-                                for ( int i = ::Search.size() - 1; i >= 0; i-- )
-                                    if ( ::songs[ ::Search[ i ] ].Path.find( ::Searching ) == ::std::wstring::npos )
-                                        ::Search.erase( ::Search.begin() + i );
+                                if ( ::Searching == L"NULL" ) {
+                                    ::Search.clear();
+                                    for ( int i = 0; i < ::display.size(); i++ )
+                                        if ( !::songs[ ::display[ i ] ].Minicover )
+                                            ::Search.push_back( ::display[ i ] );
+                                } else {
+                                    for ( int i = ::Search.size() - 1; i >= 0; i-- )
+                                        if ( ::songs[ ::Search[ i ] ].Path.find( ::Searching ) == ::std::wstring::npos )
+                                            ::Search.erase( ::Search.begin() + i );
+                                }
                             break;
                         case 2:
                                 ::Search.clear();
@@ -76,7 +83,7 @@ struct Cover : ::UI {
 
             if ( rect == ::Input::hover ) {
                 ::DefaultDisplay( ::Saved::Playing );
-                ::DisplayInformation[ 3 ] = []() { return ::String::WConcat( ( int )::cursor, L" / ", ::songs[ ::Saved::Playing ].Duration, L"s" ); };
+                ::DisplayInformation[ 4 ] = []() { return ::String::WConcat( ( int )::cursor, L" / ", ::songs[ ::Saved::Playing ].Duration, L"s" ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::String::WConcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 2 ] = []() { return ::String::WConcat( L"Sorting: ", ::STNames[ ::Saved::Sorting ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 1 ] = []() { return ::String::WConcat( L"Playback: ", ::PBNames[ ::Saved::Playback ] ); };

@@ -51,7 +51,7 @@
     int len = ::WideCharToMultiByte( CP_ACP, 0, str.c_str(), -1, nullptr, 0, nullptr, nullptr );
     ::std::string ansii( len, 0 );
     ::WideCharToMultiByte( CP_ACP, 0, str.c_str(), -1, &ansii[ 0 ], len, nullptr, nullptr );
-    
+
     ansii.pop_back();
 
     return ansii;
@@ -73,7 +73,7 @@
 ::std::wstring String::ResolveLnk( const ::std::wstring& str ) {
     static ::IShellLinkW* shell = nullptr;
     static ::IPersistFile* file = nullptr;
-    
+
     ::WCHAR path[ MAX_PATH ] = { 0 };
 
     if ( !shell )

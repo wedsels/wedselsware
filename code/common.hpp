@@ -104,6 +104,12 @@ namespace String {
     ::std::wstring ResolveLnk( const ::std::wstring& str );
 };
 
+inline void Path( ::std::wstring& path ) {
+    for ( auto& i : path )
+        if ( i == L'\\' )
+            i = L'/';
+}
+
 template < typename... T >
 inline void Box( T... text ) {
     ::std::wstringstream wss;
@@ -159,14 +165,14 @@ struct Rect {
     int l, t, r, b;
 
     Rect() { l = t = r = b = 0; }
-    
+
     Rect( int left, int top, int right, int bottom ) {
         l = left;
         t = top;
         r = right;
         b = bottom;
     }
-    
+
     Rect( int left, int top, int size ) {
         l = left;
         t = top;

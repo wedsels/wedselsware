@@ -13,7 +13,7 @@ void Clean( ::uint32_t entry ) {
     for ( const auto& i : ::instances[ entry ] )
         if ( i )
             i->Release();
-    
+
     ::instances.erase( entry );
     ::MixerEntries.erase( entry );
     ::MixersActive.erase( ::MixersActive.begin() + ::Index( ::MixersActive, entry ) );
