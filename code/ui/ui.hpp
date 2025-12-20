@@ -28,20 +28,6 @@
 
 inline constexpr int MIDPOINT = ( MINICOVER + SPACING ) * COLUMNS - SPACING;
 
-struct Launch {
-    ::std::wstring path;
-    ::uint8_t img[ MINICOVER * MINICOVER * 4 + 1 ];
-};
-
-extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-extern void UpdateDirectories( ::MSG& msg );
-
-inline ::std::vector< ::uint32_t > Apps;
-inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
-inline ::std::vector< ::uint32_t > Webs;
-inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
-
 inline ::std::atomic< ::uint32_t > Canvas[ WINWIDTH * WINHEIGHT ];
 
 inline ::std::wstring Searching;

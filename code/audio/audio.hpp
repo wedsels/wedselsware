@@ -49,14 +49,28 @@ struct media {
 enum struct Playback { Linear, Repeat, Shuffle, Queue, Count };
 enum struct SortTypes { Time, Artist, Title, Count };
 
+struct Launch {
+    wchar_t path[ MAX_PATH ];
+    ::uint8_t img[ MINICOVER * MINICOVER * 4 + 1 ];
+};
+
+extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void UpdateDirectories( ::MSG& msg );
+
 struct Volume {
-    ::std::wstring name;
-    ::uint8_t* minicover;
+    wchar_t name[ ::MINIPATH ];
+    ::uint8_t minicover[ MINICOVER * MINICOVER * 4 + 1 ];
 };
 inline ::std::unordered_map< ::uint32_t, ::Volume > MixerEntries;
 inline ::std::vector< ::uint32_t > MixersActive;
 
 namespace Saved {
+    inline ::std::vector< ::uint32_t > Apps;
+    inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
+    inline ::std::vector< ::uint32_t > Webs;
+    inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
+
     inline ::uint32_t Playing;
     inline ::SortTypes Sorting;
     inline ::Playback Playback;
@@ -86,13 +100,13 @@ inline void Sort() {
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
                     int cmp;
                     
-                    cmp = ::wcscmp(::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist);
+                    cmp = ::wcscmp( ::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist );
                     if ( cmp != 0 ) return cmp < 0;
 
-                    cmp = ::wcscmp(::Saved::Songs[ a ].Album, ::Saved::Songs[ b ].Album);
+                    cmp = ::wcscmp( ::Saved::Songs[ a ].Album, ::Saved::Songs[ b ].Album );
                     if ( cmp != 0 ) return cmp < 0;
 
-                    return ::wcscmp(::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title) < 0;
+                    return ::wcscmp(::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title ) < 0;
                 } );
             break;
         case ::SortTypes::Title:
@@ -143,6 +157,7 @@ inline void Remove( ::uint32_t id ) {
 }
 
 inline void Clean( ::Play& Play ) {
+    ::std::memset( Play.Cover, 0, ARRAYSIZE( Play.Cover ) );
     if ( Play.Format ) ::avformat_close_input( &Play.Format );
     if ( Play.Codec ) ::avcodec_free_context( &Play.Codec );
     if ( Play.Packet ) ::av_packet_free( &Play.Packet );

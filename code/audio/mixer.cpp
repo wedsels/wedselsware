@@ -9,7 +9,6 @@ inline ::std::unordered_map< ::uint32_t, ::std::unordered_set< ::ISimpleAudioVol
 void Clean( ::uint32_t entry ) {
     ::Volume& t = MixerEntries[ entry ];
 
-    ::delete[] t.minicover;
     for ( const auto& i : ::instances[ entry ] )
         if ( i )
             i->Release();
@@ -72,7 +71,16 @@ void SetMixers() {
 
                         if ( !FAILED( pVolume->SetMasterVolume( ( float )::Saved::Mixers[ id ], NULL ) ) ) {
                             if ( !::MixerEntries.contains( id ) ) {
-                                ::MixerEntries[ id ] = { .name = name, .minicover = ::ArchiveHICON( p, MINICOVER ) };
+                                ::MixerEntries[ id ] = {};
+                                ::wcsncpy_s( ::MixerEntries[ id ].name, ::MINIPATH, name.c_str(), ::MINIPATH - 1 );
+
+                                ::uint8_t* icon = ::ArchiveHICON( p, MINICOVER );
+                                if ( icon ) {
+                                    ::MixerEntries[ id ].minicover[ ARRAYSIZE( ::MixerEntries[ id ].minicover ) - 1 ] = 255;
+                                    ::std::memcpy( ::MixerEntries[ id ].minicover, icon, ARRAYSIZE( ::MixerEntries[ id ].minicover ) - 1 );
+                                }
+                                ::delete[] icon;
+
                                 ::instances[ id ] = {};
                                 ::MixersActive.push_back( id );
                             }

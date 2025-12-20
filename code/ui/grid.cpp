@@ -7,8 +7,8 @@ int lasttile = -1;
         case ::GridTypes::Queue: return ::Saved::Queue;
         case ::GridTypes::Search: return ::Search;
         case ::GridTypes::Mixer: return ::MixersActive;
-        case ::GridTypes::Apps: return ::Apps;
-        case ::GridTypes::Webs: return ::Webs;
+        case ::GridTypes::Apps: return ::Saved::Apps;
+        case ::GridTypes::Webs: return ::Saved::Webs;
         default: return ::display;
     }
 }
@@ -25,8 +25,8 @@ int lasttile = -1;
 ::uint8_t* GetCover( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer: return ::MixerEntries[ entry ].minicover;
-        case ::GridTypes::Apps: return ::AppsPath[ entry ].img;
-        case ::GridTypes::Webs: return ::WebsPath[ entry ].img;
+        case ::GridTypes::Apps: return ::Saved::AppsPath[ entry ].img;
+        case ::GridTypes::Webs: return ::Saved::WebsPath[ entry ].img;
         default: return ::Saved::Songs[ entry ].Minicover;
     }
 }
@@ -37,8 +37,8 @@ int lasttile = -1;
             return {
                 .scrl = [ entry ]( int dir ) { ::SetMixerVolume( entry, dir * -0.01 ); }
             };
-        case ::GridTypes::Apps: return { .lmb = [ entry ]() { ::Execute( ::AppsPath[ entry ].path ); } };
-        case ::GridTypes::Webs: return { .lmb = [ entry ]() { ::Execute( ::WebsPath[ entry ].path ); } };
+        case ::GridTypes::Apps: return { .lmb = [ entry ]() { ::Execute( ::Saved::AppsPath[ entry ].path ); } };
+        case ::GridTypes::Webs: return { .lmb = [ entry ]() { ::Execute( ::Saved::WebsPath[ entry ].path ); } };
         default:
             return {
                 .lmb = [ entry ]() {
@@ -79,10 +79,10 @@ void GetDisplay( ::uint32_t entry ) {
                 ::DisplayInformation[ 1 ] = [ entry ]() { return ::String::WConcat( ::Saved::Mixers[ entry ], L"%" ); };
             break;
         case ::GridTypes::Apps:
-                ::DisplayInformation[ 0 ] = [ entry ]() { return ::AppsPath[ entry ].path; };
+                ::DisplayInformation[ 0 ] = [ entry ]() { return ::Saved::AppsPath[ entry ].path; };
             break;
         case ::GridTypes::Webs:
-                ::DisplayInformation[ 0 ] = [ entry ]() { return ::WebsPath[ entry ].path; };
+                ::DisplayInformation[ 0 ] = [ entry ]() { return ::Saved::WebsPath[ entry ].path; };
             break;
         default:
                 ::DefaultDisplay( entry );

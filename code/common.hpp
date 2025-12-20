@@ -212,4 +212,4 @@ namespace Input {
 
         static void create( ::Rect& rect, Click& c ) { clicks[ rect ] = ::std::move( c ); }
     };
-};  
+};

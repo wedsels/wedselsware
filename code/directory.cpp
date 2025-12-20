@@ -108,7 +108,14 @@ void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::
 
     ::uint32_t id = ::String::Hash( path );
 
-    ::Launch launch{ .path = res };
+    if ( ::Index( ids, id ) > -1 )
+        return;
+
+    ::Launch launch;
+    ::wcsncpy_s( launch.path, MAX_PATH, res.c_str(), MAX_PATH - 1 );
+
+    ::std::memset( launch.img, 0, ARRAYSIZE( launch.img ) );
+
     ::uint8_t* icon = ::ArchiveHICON( res.c_str(), MINICOVER );
     if ( icon ) {
         launch.img[ ARRAYSIZE( launch.img ) - 1 ] = 255;

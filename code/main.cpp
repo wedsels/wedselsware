@@ -13,6 +13,11 @@ void Save() {
     if ( !s.file )
         return;
 
+    s.write( ::Saved::Apps );
+    s.write( ::Saved::AppsPath );
+    s.write( ::Saved::Webs );
+    s.write( ::Saved::WebsPath );
+
     s.write( ::Saved::Playing );
     s.write( ::Saved::Sorting );
     s.write( ::Saved::Playback );
@@ -26,6 +31,11 @@ void Load() {
     ::Deserializer d;
     if ( !d.file )
         return;
+
+    d.read( ::Saved::Apps );
+    d.read( ::Saved::AppsPath );
+    d.read( ::Saved::Webs );
+    d.read( ::Saved::WebsPath );
 
     d.read( ::Saved::Playing );
     d.read( ::Saved::Sorting );
@@ -141,8 +151,8 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     HER( ::CoInitialize( NULL ) );
 // WHEN ADDING FILES IT IS NOT DONE IN BETWEEN THREAD UPDATES, BUT INSTEAD CONSUMES THE WHOLE TRHEAD
-    HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Apps, ::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Apps, ::AppsPath ); } ) );
-    HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Webs, ::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Webs, ::WebsPath ); } ) );
+    HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Apps, ::Saved::AppsPath ); } ) );
+    HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Webs, ::Saved::WebsPath ); } ) );
     HER( ::InitializeDirectory( SongPath.c_str(), ::ArchiveSong, ::Remove ) );
 
     HER( ::InitializeFont() );

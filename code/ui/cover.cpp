@@ -55,7 +55,7 @@ struct Cover : ::UI {
                                 if ( ::Searching == L"NULL" ) {
                                     ::Search.clear();
                                     for ( int i = 0; i < ::display.size(); i++ )
-                                        if ( !::Saved::Songs[ ::display[ i ] ].Minicover[ MINICOVER * MINICOVER ] )
+                                        if ( !::Saved::Songs[ ::display[ i ] ].Minicover[ MINICOVER * MINICOVER * 3 ] )
                                             ::Search.push_back( ::display[ i ] );
                                 } else {
                                     for ( int i = ::Search.size() - 1; i >= 0; i-- )

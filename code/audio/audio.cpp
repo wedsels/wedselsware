@@ -114,12 +114,14 @@ void ArchiveSong( ::std::wstring p ) {
     media.ID = ::String::Hash( expected );
     ::wcsncpy_s( media.Path, MAX_PATH, expected.c_str(), MAX_PATH - 1 );
 
-    ::uint8_t* mini = ::ResizeImage( ::SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
-    if ( mini ) {
-        media.Minicover[ ARRAYSIZE( media.Minicover ) - 1 ] = 255;
-        ::std::memcpy( media.Minicover, mini, ARRAYSIZE( media.Minicover ) - 1 );
+    if ( ::SecondPlay.Cover[ ARRAYSIZE( ::SecondPlay.Cover ) - 1 ] ) {
+        ::uint8_t* mini = ::ResizeImage( ::SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
+        if ( mini ) {
+            media.Minicover[ ARRAYSIZE( media.Minicover ) - 1 ] = 255;
+            ::std::memcpy( media.Minicover, mini, ARRAYSIZE( media.Minicover ) - 1 );
+        }
+        ::delete[] mini;
     }
-    ::delete[] mini;
 
     ::Clean( ::SecondPlay );
 
