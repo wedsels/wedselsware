@@ -2,7 +2,7 @@
 #include "audio/audio.hpp"
 
 namespace Input {
-    ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey = {
+    ::std::unordered_map< ::DWORD, ::std::function< bool( bool ) > > globalkey = {
         { VK_HOME, []( bool down ) {
             if ( down ) {
                 if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )

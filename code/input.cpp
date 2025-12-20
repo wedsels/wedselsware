@@ -60,19 +60,17 @@ void SetState( ::DWORD key, bool down ) {
 }
 
 ::LRESULT CALLBACK InputProc( int nCode, ::WPARAM wParam, ::LPARAM lParam ) {
-    if ( nCode == HC_ACTION && ~nCode < 0 ) {
+    if ( nCode == HC_ACTION ) {
         if ( wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP ) {
             ::DWORD key = ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode;
             bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
 
-
-            if ( auto it = ::Input::globalkey.find( key ); it != ::Input::globalkey.end() )
-                if ( it->second( down ) ) {
+            if ( ::Input::globalkey.contains( key ) ) {
+                if ( ::Input::globalkey[ key ]( down ) ) {
                     ::Redraw( ::DrawType::Redo );
                     return -1;
                 }
-
-            if ( !down && ::Input::State[ key ].load( ::std::memory_order_relaxed ) || !::Input::hover.empty() ) {
+            } else if ( !down && ::Input::State[ key ].load( ::std::memory_order_relaxed ) || !::Input::hover.empty() ) {
                 ::SetState( key, down );
                 BLOCKCALL( key, WM_KEYBOARD, ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode );
             } else ::SetState( key, down );

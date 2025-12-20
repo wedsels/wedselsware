@@ -57,11 +57,10 @@ struct Cover : ::UI {
                                     for ( int i = 0; i < ::display.size(); i++ )
                                         if ( !::Saved::Songs[ ::display[ i ] ].Minicover[ MINICOVER * MINICOVER * 3 ] )
                                             ::Search.push_back( ::display[ i ] );
-                                } else {
+                                } else
                                     for ( int i = ::Search.size() - 1; i >= 0; i-- )
-                                        if ( ::wcsstr( ::Saved::Songs[ ::Search[ i ] ].Path, ::Searching.c_str() ) )
+                                        if ( !::wcsstr( ::Saved::Songs[ ::Search[ i ] ].Path, ::Searching.c_str() ) )
                                             ::Search.erase( ::Search.begin() + i );
-                                }
                             break;
                         case 2:
                                 ::Search.clear();

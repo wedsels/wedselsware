@@ -94,6 +94,7 @@ inline void Path( ::std::wstring& path ) {
     for ( auto& i : path )
         if ( i == L'\\' )
             i = L'/';
+        else i = ::toupper( i );
 }
 
 template < typename... T >
@@ -197,7 +198,7 @@ namespace Input {
     struct Click;
     inline ::std::unordered_map< ::Rect, Click > clicks;
 
-    extern ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey;
+    extern ::std::unordered_map< ::DWORD, ::std::function< bool( bool ) > > globalkey;
 
     struct Click {
         ::DrawType intensity = ::DrawType::Redo;
