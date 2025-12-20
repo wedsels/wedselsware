@@ -11,6 +11,8 @@ extern "C" {
     #include <libswresample/swresample.h>
 }
 
+inline constexpr int MINIPATH = MAX_PATH / 3;
+
 struct Play {
     ::AVFormatContext* Format;
     ::AVCodecContext* Codec;
@@ -18,7 +20,7 @@ struct Play {
     ::AVPacket* Packet;
     ::AVFrame* Frame;
     ::uint16_t Duration;
-    ::uint8_t* Cover;
+    ::uint8_t Cover[ MIDPOINT * MIDPOINT * 3 + 1 ];
     ::HANDLE File;
     double Timebase;
     int Samplerate;
@@ -28,15 +30,15 @@ struct Play {
 inline Play Playing;
 
 struct media {
-    ::std::wstring Encoding;
-    ::std::wstring Artist;
-    ::std::wstring Album;
-    ::std::wstring Title;
-    ::std::wstring Path;
+    wchar_t Encoding[ 4 ];
+    wchar_t Artist[ ::MINIPATH ];
+    wchar_t Album[ ::MINIPATH ];
+    wchar_t Title[ ::MINIPATH ];
+    wchar_t Path[ MAX_PATH ];
     ::uint64_t Write;
     ::uint32_t ID;
     ::uint16_t Duration;
-    ::uint8_t* Minicover;
+    ::uint8_t Minicover[ MINICOVER * MINICOVER * 3 + 1 ];
     ::size_t Size;
     int Samplerate;
     int Bitrate;
@@ -61,10 +63,10 @@ namespace Saved {
     inline ::std::vector< ::uint32_t > Queue;
     inline ::std::unordered_map< ::uint32_t, double > Volumes;
     inline ::std::unordered_map< ::uint32_t, double > Mixers;
+    inline ::std::unordered_map< ::uint32_t, ::media > Songs;
 };
 
-inline ::std::vector< ::uint32_t > display = {};
-inline ::std::unordered_map< ::uint32_t, ::media > songs{};
+inline ::std::vector< ::uint32_t > display {};
 
 static const ::std::wstring SongPath = L"F:/SoundStuff/Sounds/";
 
@@ -77,17 +79,33 @@ inline void Sort() {
     switch ( ::Saved::Sorting ) {
         case ::SortTypes::Time:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::songs[ a ].Write < ::songs[ b ].Write;
+                    return ::Saved::Songs[ a ].Write < ::Saved::Songs[ b ].Write;
                 } );
             break;
         case ::SortTypes::Artist:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::std::tie( songs[ a ].Artist, songs[ a ].Album, songs[ a ].Title ) < ::std::tie( songs[ b ].Artist, songs[ b ].Album, songs[ b ].Title );
+                    int cmp;
+                    
+                    cmp = ::wcscmp(::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist);
+                    if ( cmp != 0 ) return cmp < 0;
+
+                    cmp = ::wcscmp(::Saved::Songs[ a ].Album, ::Saved::Songs[ b ].Album);
+                    if ( cmp != 0 ) return cmp < 0;
+
+                    return ::wcscmp(::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title) < 0;
                 } );
             break;
         case ::SortTypes::Title:
                 ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
-                    return ::std::tie( songs[ a ].Title, songs[ a ].Artist, songs[ a ].Album ) < ::std::tie( songs[ b ].Title, songs[ b ].Artist, songs[ b ].Album );
+                    int cmp;
+                    
+                    cmp = ::wcscmp( ::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title );
+                    if ( cmp != 0 ) return cmp < 0;
+
+                    cmp = ::wcscmp( ::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist );
+                    if ( cmp != 0 ) return cmp < 0;
+
+                    return ::wcscmp( ::Saved::Songs[ a ].Album, ::Saved::Songs[ b ].Album ) < 0;
                 } );
             break;
         default: break;
@@ -104,10 +122,8 @@ inline ::std::atomic< bool > PauseAudio = true;
 inline ::std::mutex PlayerMutex;
 
 inline void Remove( ::uint32_t id ) {
-    if ( ::songs.contains( id ) ) {
-        ::delete[] ::songs[ id ].Minicover;
-        ::songs.erase( id );
-    }
+    if ( ::Saved::Songs.contains( id ) )
+        ::Saved::Songs.erase( id );
 
     int index;
 
@@ -127,7 +143,6 @@ inline void Remove( ::uint32_t id ) {
 }
 
 inline void Clean( ::Play& Play ) {
-    if ( Play.Cover ) { ::delete[] Play.Cover; Play.Cover = nullptr; }
     if ( Play.Format ) ::avformat_close_input( &Play.Format );
     if ( Play.Codec ) ::avcodec_free_context( &Play.Codec );
     if ( Play.Packet ) ::av_packet_free( &Play.Packet );

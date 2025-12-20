@@ -5,7 +5,7 @@ namespace Input {
     ::std::unordered_map< int, ::std::function< bool( bool ) > > globalkey = {
         { VK_HOME, []( bool down ) {
             if ( down ) {
-                if ( ::Input::State[ VK_CONTROL ] )
+                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
                     if ( ( ::PauseDraw = !::PauseDraw ) )
                         ::InitiateDraw();
                     else ::Draw( ::DrawType::Redo );
@@ -20,7 +20,7 @@ namespace Input {
         } },
         { VK_PRIOR, []( bool down ) {
             if ( down ) {
-                if ( ::Input::State[ VK_CONTROL ] )
+                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
                     ::queue::next( 1 );
                 else
                     ::SetVolume( 0.05 );
@@ -30,7 +30,7 @@ namespace Input {
         } },
         { VK_NEXT, []( bool down ) {
             if ( down ) {
-                if ( ::Input::State[ VK_CONTROL ] )
+                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
                     ::queue::next( -1 );
                 else
                     ::SetVolume( -0.05 );
@@ -40,11 +40,11 @@ namespace Input {
         } },
         { VK_CAPITAL, []( bool down ) {
             if ( !down ) {
-                if ( ::Input::State[ VK_CONTROL ] )
+                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
                     ::Execute( L"cmd.exe", 2 );
-                else if ( ::Input::State[ VK_MENU ] )
+                else if ( ::Input::State[ VK_MENU ].load( ::std::memory_order_relaxed ) )
                     ::SetDefaultDevice();
-                else if ( ::Input::State[ VK_SHIFT ] )
+                else if ( ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) )
                     ::Seek( 0 );
                 else
                     ::Execute( L"C:\\Program Files\\Mozilla Firefox\\firefox.exe" );

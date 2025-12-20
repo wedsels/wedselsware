@@ -1,5 +1,12 @@
 #include "ui.hpp"
 
+void SetPixel( int x, int y, ::uint32_t color ) {
+    if ( y * WINWIDTH + x > WINWIDTH * WINHEIGHT )
+        return;
+
+    ::Canvas[ y * WINWIDTH + x ] = color;
+}
+
 void CheckClick( ::Rect r, float* light, ::std::optional< ::Input::Click > c ) {
     if ( c ) {
         ::Input::Click::create( r, *c );

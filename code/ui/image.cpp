@@ -8,7 +8,7 @@
 #include <shellapi.h>
 
 ::uint32_t ImagePixelColor( ::uint8_t* img, int x, int y, int size, int channels, float light ) {
-    if ( !img )
+    if ( !img[ size * size * channels ] )
         return ::Multiply( COLORGHOST, light );
 
     int index = ( ( ( y % size ) + size ) % size * size + ( ( x % size ) + size ) % size ) * channels;

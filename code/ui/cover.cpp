@@ -34,9 +34,9 @@ struct Cover : ::UI {
             ::Rect rect { 0, WINHEIGHT - ::MIDPOINT, ::MIDPOINT };
 
             ::Input::Click c {
-                .lmb = []() { ::EnumNext( ::GridType, ::Input::State[ VK_SHIFT ] ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
-                .rmb = []() { ::EnumNext( ::Saved::Playback, ::Input::State[ VK_SHIFT ] ); },
-                .mmb = []() { ::EnumNext( ::Saved::Sorting, ::Input::State[ VK_SHIFT ] ); ::Sort(); },
+                .lmb = []() { ::EnumNext( ::GridType, ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) ); ::DisplayOffset = ::Index( ::display, ::Saved::Playing ); },
+                .rmb = []() { ::EnumNext( ::Saved::Playback, ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) ); },
+                .mmb = []() { ::EnumNext( ::Saved::Sorting, ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) ); ::Sort(); },
                 .xmb = []( int d ) { ::queue::next( d ); },
                 .scrl = []( int s ) { ::SetVolume( s * -0.001 ); }
             };
@@ -44,7 +44,7 @@ struct Cover : ::UI {
             bool search = ::GridType == ::GridTypes::Search;
 
             if ( search )
-                c.key = []( int key ) {
+                c.key = []( ::DWORD key ) {
                     if ( ::Searching.empty() && ::Search.empty() )
                         ::Search = ::display;
 
@@ -55,18 +55,18 @@ struct Cover : ::UI {
                                 if ( ::Searching == L"NULL" ) {
                                     ::Search.clear();
                                     for ( int i = 0; i < ::display.size(); i++ )
-                                        if ( !::songs[ ::display[ i ] ].Minicover )
+                                        if ( !::Saved::Songs[ ::display[ i ] ].Minicover[ MINICOVER * MINICOVER ] )
                                             ::Search.push_back( ::display[ i ] );
                                 } else {
                                     for ( int i = ::Search.size() - 1; i >= 0; i-- )
-                                        if ( ::songs[ ::Search[ i ] ].Path.find( ::Searching ) == ::std::wstring::npos )
+                                        if ( ::wcsstr( ::Saved::Songs[ ::Search[ i ] ].Path, ::Searching.c_str() ) )
                                             ::Search.erase( ::Search.begin() + i );
                                 }
                             break;
                         case 2:
                                 ::Search.clear();
                                 for ( int i = 0; i < ::display.size(); i++ )
-                                    if ( ::songs[ ::display[ i ] ].Path.find( ::Searching ) != ::std::wstring::npos )
+                                    if ( ::wcsstr( ::Saved::Songs[ ::display[ i ] ].Path, ::Searching.c_str() ) )
                                         ::Search.push_back( ::display[ i ] );
                             break;
                     }
@@ -83,7 +83,7 @@ struct Cover : ::UI {
 
             if ( rect == ::Input::hover ) {
                 ::DefaultDisplay( ::Saved::Playing );
-                ::DisplayInformation[ 4 ] = []() { return ::String::WConcat( ( int )::cursor, L" / ", ::songs[ ::Saved::Playing ].Duration, L"s" ); };
+                ::DisplayInformation[ 4 ] = []() { return ::String::WConcat( ( int )::cursor, L" / ", ::Saved::Songs[ ::Saved::Playing ].Duration, L"s" ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::String::WConcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 2 ] = []() { return ::String::WConcat( L"Sorting: ", ::STNames[ ::Saved::Sorting ] ); };
                 ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 1 ] = []() { return ::String::WConcat( L"Playback: ", ::PBNames[ ::Saved::Playback ] ); };

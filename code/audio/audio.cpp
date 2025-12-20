@@ -5,13 +5,13 @@
 void SetSong( ::uint32_t song ) {
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
-    if ( !::songs.contains( song ) )
+    if ( !::Saved::Songs.contains( song ) )
         return::Remove( song );
 
     ::Clean( ::Playing );
 
-    auto& s = ::songs[ song ];
-    ::Playing.File = ::CreateFileW( s.Path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+    auto& s = ::Saved::Songs[ song ];
+    ::Playing.File = ::CreateFileW( s.Path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 
     if ( FAILED( ::FFMPEG( ::Playing ) ) ) {
         ::Clean( ::Playing );
@@ -45,47 +45,51 @@ void SetSong( ::uint32_t song ) {
     return ::String::Utf8Wide( ret );
 }
 
+inline ::Play SecondPlay;
+
 void ArchiveSong( ::std::wstring p ) {
     ::Path( p );
 
     ::uint32_t pid = ::String::Hash( p );
-    if ( ::songs.contains( pid ) && ::songs[ pid ].ID )
+    if ( ::Saved::Songs.contains( pid ) && ::Saved::Songs[ pid ].ID ) {
+        if ( !::std::filesystem::exists( p ) )
+            ::Remove( pid );
         return;
+    }
 
     ::media media = {};
-    ::Play play = {};
 
     ::std::filesystem::path path( p );
 
-    play.File = ::CreateFileW( path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
-    if ( !play.File )
-        return::Clean( play );
+    ::SecondPlay.File = ::CreateFileW( path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+    if ( !::SecondPlay.File )
+        return::Clean( ::SecondPlay );
 
     ::FILETIME time;
-    ::GetFileTime( play.File, &time, nullptr, nullptr );
+    ::GetFileTime( ::SecondPlay.File, &time, nullptr, nullptr );
     ::ULARGE_INTEGER ul;
     ul.LowPart = time.dwLowDateTime;
     ul.HighPart = time.dwHighDateTime;
     media.Write = ul.QuadPart / 10000;
 
-    if ( FAILED( ::FFMPEG( play ) ) )
-        return::Clean( play );
+    if ( FAILED( ::FFMPEG( ::SecondPlay ) ) )
+        return::Clean( ::SecondPlay );
 
-    media.Artist = L"_";
-    media.Title = L"_";
-    media.Album = L"_";
+    media.Artist[ 0 ] = L'_';
+    media.Title[ 0 ] = L'_';
+    media.Album[ 0 ] = L'_';
 
-    ::AVDictionary* metadata = play.Format->metadata;
+    ::AVDictionary* metadata = ::SecondPlay.Format->metadata;
     ::AVDictionaryEntry* tag = nullptr;
     while ( ( tag = ::av_dict_get( metadata, "", tag, AV_DICT_IGNORE_SUFFIX ) ) )
         if ( ::_stricmp( tag->key, "ARTIST" ) == 0 )
-            media.Artist = ::NormalizeString( tag->value );
+            ::wcsncpy_s( media.Artist, MINIPATH, ::NormalizeString( tag->value ).c_str(), MINIPATH - 1 );
         else if ( ::_stricmp( tag->key, "TITLE" ) == 0 )
-            media.Title = ::NormalizeString( tag->value );
+            ::wcsncpy_s( media.Title, MINIPATH, ::NormalizeString( tag->value ).c_str(), MINIPATH - 1 );
         else if ( ::_stricmp( tag->key, "ALBUM" ) == 0 )
-            media.Album = ::NormalizeString( tag->value );
+            ::wcsncpy_s( media.Album, MINIPATH, ::NormalizeString( tag->value ).c_str(), MINIPATH - 1 );
 
-    media.Encoding = path.extension().wstring();
+    ::wcsncpy_s( media.Encoding, 4, path.extension().wstring().c_str(), 4 - 1 );
 
     ::std::wstring dir = ::String::WConcat( SongPath, media.Artist, L"/", media.Album, L"/" );
 
@@ -103,20 +107,26 @@ void ArchiveSong( ::std::wstring p ) {
     if ( path.wstring() != expected )
         ::std::filesystem::rename( path.wstring(), expected );
 
-    media.Samplerate = play.Samplerate;
-    media.Duration = play.Duration;
-    media.Bitrate = play.Bitrate;
-    media.Path = expected;
+    media.Samplerate = ::SecondPlay.Samplerate;
+    media.Duration = ::SecondPlay.Duration;
+    media.Bitrate = ::SecondPlay.Bitrate;
     media.Size = ::std::filesystem::file_size( expected ) / 1000000;
     media.ID = ::String::Hash( expected );
+    ::wcsncpy_s( media.Path, MAX_PATH, expected.c_str(), MAX_PATH - 1 );
 
-    media.Minicover = ::ResizeImage( play.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
-    ::Clean( play );
+    ::uint8_t* mini = ::ResizeImage( ::SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
+    if ( mini ) {
+        media.Minicover[ ARRAYSIZE( media.Minicover ) - 1 ] = 255;
+        ::std::memcpy( media.Minicover, mini, ARRAYSIZE( media.Minicover ) - 1 );
+    }
+    ::delete[] mini;
+
+    ::Clean( ::SecondPlay );
 
     if ( ::Saved::Volumes.find( media.ID ) == ::Saved::Volumes.end() )
         ::Saved::Volumes[ media.ID ] = 0.2;
 
-    ::songs[ media.ID ] = media;
+    ::Saved::Songs[ media.ID ] = media;
     ::display.push_back( media.ID );
 
     if ( media.ID == ::Saved::Playing )
@@ -207,8 +217,12 @@ static int rpacket( void* opaque, ::uint8_t* buf, int bufsize ) {
             ::AVPacket* p = ::av_packet_alloc();
             if ( ::av_read_frame( play.Format, p ) == 0 )
                 if ( p->size > 0 && p->stream_index == i ) {
-                    ::delete[] play.Cover;
-                    play.Cover = ::ArchiveImage( p->data, p->size, ::MIDPOINT );
+                    ::uint8_t* cover = ::ArchiveImage( p->data, p->size, ::MIDPOINT );
+                    if ( cover ) {
+                        play.Cover[ ARRAYSIZE( play.Cover ) - 1 ] = 255;
+                        ::std::memcpy( play.Cover, cover, ARRAYSIZE( play.Cover ) - 1 );
+                    }
+                    ::delete[] cover;
                 }
             ::av_packet_free( &p );
         }

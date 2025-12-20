@@ -30,11 +30,6 @@
 #define WM_MIXER ( WM_USER + 6 )
 #define WM_MOUSE ( WM_USER + 7 )
 
-struct Launch {
-    ::std::wstring path;
-    ::uint8_t* img;
-};
-
 inline ::HWND hwnd;
 inline ::HWND desktophwnd;
 
@@ -48,15 +43,6 @@ extern ::HRESULT InitDraw();
 
 extern void Mouse( int c, ::LPARAM l );
 extern void Keyboard( int c, ::LPARAM l );
-
-extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-extern void UpdateDirectories( ::MSG& msg );
-
-inline ::std::vector< ::uint32_t > Apps;
-inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
-inline ::std::vector< ::uint32_t > Webs;
-inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
 
 namespace String {
     template< typename... Args >

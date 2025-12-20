@@ -19,6 +19,7 @@ void Save() {
     s.write( ::Saved::Queue );
     s.write( ::Saved::Volumes );
     s.write( ::Saved::Mixers );
+    s.write( ::Saved::Songs );
 }
 
 void Load() {
@@ -32,6 +33,11 @@ void Load() {
     d.read( ::Saved::Queue );
     d.read( ::Saved::Volumes );
     d.read( ::Saved::Mixers );
+    d.read( ::Saved::Songs );
+
+    for ( auto& i : ::Saved::Songs )
+        ::display.push_back( i.first );
+    ::Sort();
 }
 
 ::LONG WINAPI Crash( ::EXCEPTION_POINTERS* exceptionInfo ) {

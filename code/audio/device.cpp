@@ -36,7 +36,7 @@ void SetVolume( double v ) {
     HR( ::ma_device_init( &::Context, &::Config, &::Device ) );
     HR( ::ma_device_start( &::Device ) );
 
-    if ( ::songs.size() > 0 )
+    if ( ::Saved::Songs.size() > 0 )
         ::SetSong( ::Saved::Playing );
 
     return S_OK;

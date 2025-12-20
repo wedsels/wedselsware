@@ -108,8 +108,16 @@ void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::
 
     ::uint32_t id = ::String::Hash( path );
 
+    ::Launch launch{ .path = res };
+    ::uint8_t* icon = ::ArchiveHICON( res.c_str(), MINICOVER );
+    if ( icon ) {
+        launch.img[ ARRAYSIZE( launch.img ) - 1 ] = 255;
+        ::std::memcpy( launch.img, icon, ARRAYSIZE( launch.img ) - 1 );
+    }
+    ::delete[] icon;
+
     ids.push_back( id );
-    map.emplace( id, ::Launch{ .path = res, .img = ::ArchiveHICON( res.c_str(), MINICOVER ) } );
+    map.emplace( id, launch );
 }
 
 void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map ) {
@@ -117,13 +125,12 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
     if ( i < 0 )
         return;
 
-    ::delete[] map[ id ].img;
     ids.erase( ids.begin() + i );
     map.erase( id );
 }
 
 ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
-    ::Directory dir = { path, add, remove, ::std::filesystem::directory_iterator( path, std::filesystem::directory_options::skip_permission_denied ) };
+    ::Directory dir = { path, add, remove, ::std::filesystem::directory_iterator( path, ::std::filesystem::directory_options::skip_permission_denied ) };
     Directories.push_back( dir );
 
     THREAD(
@@ -135,16 +142,16 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
                 if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME ) {
                     if ( ::std::filesystem::is_directory( fpath ) ) {
                         for ( auto& i : ::std::filesystem::recursive_directory_iterator( fpath ) )
-                            if ( i.is_regular_file() && !i.is_symlink() )
+                            if ( i.is_regular_file() && !i.is_symlink() && ::FileReady( i.path().wstring().c_str() ) )
                                 dir.add( i.path().wstring().c_str() );
                     } else if ( ::FileReady( fpath.c_str() ) )
                         dir.add( fpath.c_str() );
                 } else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME ) {
-                    if ( ::songs.contains( ::String::Hash( fpath ) ) )
+                    if ( ::Saved::Songs.contains( ::String::Hash( fpath ) ) )
                         dir.remove( ::String::Hash( fpath ) );
                     else
-                        for ( auto& i : ::songs | ::std::views::reverse )
-                            if ( i.second.Path.find( fpath ) != ::std::string::npos )
+                        for ( auto& i : ::Saved::Songs | ::std::views::reverse )
+                            if ( ::wcsstr( i.second.Path, fpath.c_str() ) )
                                 dir.remove( i.first );
                 }
             };

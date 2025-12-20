@@ -15,7 +15,7 @@ void Mouse( int c, ::LPARAM l ) {
 
                 if ( !::Input::hover.empty() ) {
                     ESAFECALL( hvr );
-                    if ( o != ::Input::hover && ::Input::State[ VK_LBUTTON ] )
+                    if ( o != ::Input::hover && ::Input::State[ VK_LBUTTON ].load( ::std::memory_order_relaxed ) )
                         ESAFECALL( lmb );
                 }
         }   break;
@@ -52,16 +52,19 @@ void Keyboard( int c, ::LPARAM l ) {
     ::Draw( ::DrawType::Redo );
 }
 
+void SetState( ::DWORD key, bool down ) {
+    ::Input::State[ key ].store( down, ::std::memory_order_relaxed );
+    ::Input::State[ VK_MENU ].store( ::Input::State[ VK_LMENU ] || ::Input::State[ VK_RMENU ], ::std::memory_order_relaxed );
+    ::Input::State[ VK_SHIFT ].store( ::Input::State[ VK_LSHIFT ] || ::Input::State[ VK_RSHIFT ], ::std::memory_order_relaxed );
+    ::Input::State[ VK_CONTROL ].store( ::Input::State[ VK_LCONTROL ] || ::Input::State[ VK_RCONTROL ], ::std::memory_order_relaxed );
+}
+
 ::LRESULT CALLBACK InputProc( int nCode, ::WPARAM wParam, ::LPARAM lParam ) {
     if ( nCode == HC_ACTION && ~nCode < 0 ) {
         if ( wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP ) {
             ::DWORD key = ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode;
             bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
 
-            ::Input::State[ key ] = down;
-            ::Input::State[ VK_MENU ] = ::Input::State[ VK_LMENU ] || ::Input::State[ VK_RMENU ];
-            ::Input::State[ VK_SHIFT ] = ::Input::State[ VK_LSHIFT ] || ::Input::State[ VK_RSHIFT ];
-            ::Input::State[ VK_CONTROL ] = ::Input::State[ VK_LCONTROL ] || ::Input::State[ VK_RCONTROL ];
 
             if ( auto it = ::Input::globalkey.find( key ); it != ::Input::globalkey.end() )
                 if ( it->second( down ) ) {
@@ -69,7 +72,10 @@ void Keyboard( int c, ::LPARAM l ) {
                     return -1;
                 }
 
-            BLOCKCALL( key, WM_KEYBOARD, ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode );
+            if ( !down && ::Input::State[ key ].load( ::std::memory_order_relaxed ) || !::Input::hover.empty() ) {
+                ::SetState( key, down );
+                BLOCKCALL( key, WM_KEYBOARD, ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode );
+            } else ::SetState( key, down );
         } else switch ( wParam ) {
             case WM_MOUSEMOVE: {
                     ::Input::mouse = ( ( ::MSLLHOOKSTRUCT* )lParam )->pt;
@@ -91,27 +97,30 @@ void Keyboard( int c, ::LPARAM l ) {
                         ::Message( WM_MOUSE, wParam, reinterpret_cast< ::WPARAM >( &over ) );
             }   break;
             case WM_LBUTTONDOWN:
-                    ::Input::State[ VK_LBUTTON ] = true;
-                    BLOCKCALL( lmb, WM_MOUSE, 0 );
+                    ::Input::State[ VK_LBUTTON ].store( !::Input::hover.empty(), ::std::memory_order_relaxed );
+                    if ( ::Input::State[ VK_LBUTTON ].load( ::std::memory_order_relaxed ) )
+                        BLOCKCALL( lmb, WM_MOUSE, 0 );
                 break;
             case WM_LBUTTONUP:
-                    ::Input::State[ VK_LBUTTON ] = false;
+                    ::Input::State[ VK_LBUTTON ].store( false, ::std::memory_order_relaxed );
                     BLOCKCALL( lmb, WM_MOUSE, 0 );
                 break;
             case WM_RBUTTONDOWN:
-                    ::Input::State[ VK_RBUTTON ] = true;
-                    BLOCKCALL( rmb, WM_MOUSE, 0 );
+                    ::Input::State[ VK_RBUTTON ].store( !::Input::hover.empty(), ::std::memory_order_relaxed );
+                    if ( ::Input::State[ VK_RBUTTON ].load( ::std::memory_order_relaxed ) )
+                        BLOCKCALL( rmb, WM_MOUSE, 0 );
                 break;
             case WM_RBUTTONUP:
-                    ::Input::State[ VK_RBUTTON ] = false;
+                    ::Input::State[ VK_RBUTTON ].store( false, ::std::memory_order_relaxed );
                     BLOCKCALL( rmb, WM_MOUSE, 0 );
                 break;
             case WM_MBUTTONDOWN:
-                    ::Input::State[ VK_MBUTTON ] = true;
-                    BLOCKCALL( mmb, WM_MOUSE, 0 );
+                    ::Input::State[ VK_MBUTTON ].store( !::Input::hover.empty(), ::std::memory_order_relaxed );
+                    if ( ::Input::State[ VK_MBUTTON ].load( ::std::memory_order_relaxed ) )
+                        BLOCKCALL( mmb, WM_MOUSE, 0 );
                 break;
             case WM_MBUTTONUP:
-                    ::Input::State[ VK_MBUTTON ] = false;
+                    ::Input::State[ VK_MBUTTON ].store( false, ::std::memory_order_relaxed );
                     BLOCKCALL( mmb, WM_MOUSE, 0 );
                 break;
             case WM_XBUTTONDOWN:

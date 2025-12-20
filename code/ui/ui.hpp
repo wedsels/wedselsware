@@ -1,5 +1,7 @@
 #include "../common.hpp"
 
+#include <concurrent_queue.h>
+
 #define COLORALPHA 0x00000000
 #define COLORGHOST 0x64646464
 #define COLORPALE 0xFFB0ECDA
@@ -25,6 +27,20 @@
 #define WINHEIGHT 1440
 
 inline constexpr int MIDPOINT = ( MINICOVER + SPACING ) * COLUMNS - SPACING;
+
+struct Launch {
+    ::std::wstring path;
+    ::uint8_t img[ MINICOVER * MINICOVER * 4 + 1 ];
+};
+
+extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void UpdateDirectories( ::MSG& msg );
+
+inline ::std::vector< ::uint32_t > Apps;
+inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
+inline ::std::vector< ::uint32_t > Webs;
+inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
 
 inline ::std::atomic< ::uint32_t > Canvas[ WINWIDTH * WINHEIGHT ];
 
@@ -53,6 +69,7 @@ extern int TextWidth( ::std::wstring& text );
 
 extern void DrawCursor();
 
+extern void SetPixel( int x, int y, ::uint32_t color );
 extern void Draw( ::DrawType dt );
 extern void DrawBox( ::Rect t, ::uint32_t b, float& light, ::std::optional< ::Input::Click > c = {} );
 extern void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< ::Input::Click > c = {}, ::uint8_t channels = 3 );
@@ -77,13 +94,6 @@ inline ::uint32_t Multiply( ::uint32_t color, float mult ) {
 
 inline ::uint32_t SetAlpha( ::uint32_t color, ::uint8_t alpha ) {
     return ( color & 0x00FFFFFF ) | ( alpha << 24 );
-}
-
-inline void SetPixel( int x, int y, ::uint32_t color ) {
-    if ( y * WINWIDTH + x > WINWIDTH * WINHEIGHT )
-        return;
-
-    ::Canvas[ y * WINWIDTH + x ] = color;
 }
 
 inline void InitiateDraw() {
