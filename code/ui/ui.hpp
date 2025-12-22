@@ -1,7 +1,5 @@
 #include "../common.hpp"
 
-#include <concurrent_queue.h>
-
 #define COLORALPHA 0x00000000
 #define COLORGHOST 0x64646464
 #define COLORPALE 0xFFB0ECDA

@@ -8,7 +8,12 @@
 #include <DbgHelp.h>
 #include <csignal>
 
+inline bool Loaded = false;
+
 void Save() {
+    if ( !::Loaded )
+        return;
+
     ::Serializer s;
 
     SERIALIZE( Apps );
@@ -44,6 +49,8 @@ void Load() {
     for ( auto& i : ::Saved::Songs )
         ::display.push_back( i.first );
     ::Sort();
+
+    ::Loaded = true;
 }
 
 ::LONG WINAPI Crash( ::EXCEPTION_POINTERS* exceptionInfo ) {

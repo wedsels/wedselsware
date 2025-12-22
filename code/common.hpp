@@ -5,8 +5,6 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
-#include <concurrent_unordered_map.h>
-#include <condition_variable>
 #include <unordered_set>
 #include <filesystem>
 #include <functional>
