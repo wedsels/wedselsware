@@ -47,7 +47,10 @@ void Load() {
     DESERIALIZE( Songs );
 
     for ( auto& i : ::Saved::Songs )
-        ::display.push_back( i.first );
+        if ( ::std::filesystem::exists( i.second.Path ) )
+            ::display.push_back( i.first );
+        else
+            ::Remove( i.first );
     ::Sort();
 
     ::Loaded = true;
@@ -149,7 +152,7 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
 
     HER( ::CoInitialize( NULL ) );
-// WHEN ADDING FILES IT IS NOT DONE IN BETWEEN THREAD UPDATES, BUT INSTEAD CONSUMES THE WHOLE TRHEAD
+
     HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Apps, ::Saved::AppsPath ); } ) );
     HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Webs, ::Saved::WebsPath ); } ) );
     HER( ::InitializeDirectory( SongPath.c_str(), ::ArchiveSong, ::Remove ) );
