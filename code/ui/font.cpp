@@ -28,7 +28,7 @@ int TextWidth( ::std::wstring& text ) {
         ::uint32_t* pixels = ::new ::uint32_t[ width * height ];
 
         for ( int i = 0; i < width * height; ++i )
-            pixels[ i ] = ::SetAlpha( COLORPALE, bitmap[ i ] );
+            pixels[ i ] = ( COLORGOLD & 0x00FFFFFF ) | ( bitmap[ i ] << 24 );
 
         ::stbtt_FreeBitmap( bitmap, nullptr );
 

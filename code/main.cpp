@@ -10,40 +10,36 @@
 
 void Save() {
     ::Serializer s;
-    if ( !s.file )
-        return;
 
-    s.write( ::Saved::Apps );
-    s.write( ::Saved::AppsPath );
-    s.write( ::Saved::Webs );
-    s.write( ::Saved::WebsPath );
+    SERIALIZE( Apps );
+    SERIALIZE( AppsPath );
+    SERIALIZE( Webs );
+    SERIALIZE( WebsPath );
 
-    s.write( ::Saved::Playing );
-    s.write( ::Saved::Sorting );
-    s.write( ::Saved::Playback );
-    s.write( ::Saved::Queue );
-    s.write( ::Saved::Volumes );
-    s.write( ::Saved::Mixers );
-    s.write( ::Saved::Songs );
+    SERIALIZE( Playing );
+    SERIALIZE( Sorting );
+    SERIALIZE( Playback );
+    SERIALIZE( Queue );
+    SERIALIZE( Volumes );
+    SERIALIZE( Mixers );
+    SERIALIZE( Songs );
 }
 
 void Load() {
     ::Deserializer d;
-    if ( !d.file )
-        return;
 
-    d.read( ::Saved::Apps );
-    d.read( ::Saved::AppsPath );
-    d.read( ::Saved::Webs );
-    d.read( ::Saved::WebsPath );
+    DESERIALIZE( Apps );
+    DESERIALIZE( AppsPath );
+    DESERIALIZE( Webs );
+    DESERIALIZE( WebsPath );
 
-    d.read( ::Saved::Playing );
-    d.read( ::Saved::Sorting );
-    d.read( ::Saved::Playback );
-    d.read( ::Saved::Queue );
-    d.read( ::Saved::Volumes );
-    d.read( ::Saved::Mixers );
-    d.read( ::Saved::Songs );
+    DESERIALIZE( Playing );
+    DESERIALIZE( Sorting );
+    DESERIALIZE( Playback );
+    DESERIALIZE( Queue );
+    DESERIALIZE( Volumes );
+    DESERIALIZE( Mixers );
+    DESERIALIZE( Songs );
 
     for ( auto& i : ::Saved::Songs )
         ::display.push_back( i.first );
@@ -73,9 +69,6 @@ void Load() {
     switch ( msg ) {
         case WM_NCHITTEST:
             return HTTRANSPARENT;
-        case WM_REDRAW:
-                ::Draw( ( ::DrawType )wParam );
-            return NULL;
         case WM_MOUSE:
                 ::Mouse( wParam, lParam );
             return NULL;
@@ -87,7 +80,6 @@ void Load() {
             return NULL;
         case WM_MIXER:
                 ::SetMixers();
-                ::Draw( ::DrawType::Redo );
             return NULL;
         case WM_ACTION:
                 ( *( ::std::function< void() >* )( wParam ) )();

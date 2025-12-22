@@ -202,7 +202,7 @@ void RenderFrame() {
     if ( SUCCEEDED( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) ) {
         ::uint32_t* dest = reinterpret_cast< ::uint32_t* >( mapped.pData );
         for ( ::size_t i = 0; i < WINWIDTH * WINHEIGHT; ++i )
-            dest[ i ] = ::Canvas[ i ].load( ::std::memory_order_relaxed );
+            dest[ i ] = ::Canvas[ i ];
         ::Context->Unmap( ::Texture, 0 );
     }
 
@@ -229,8 +229,6 @@ void RenderFrame() {
     ::DCDevice->Commit();
 }
 
-bool lastpause = false;
-
 ::HRESULT InitGraphics() {
     HR( ::InitD3D11() );
     HR( ::CreateDynamicTexture() );
@@ -240,20 +238,27 @@ bool lastpause = false;
     THREAD(
         while ( true ) {
             ::std::unique_lock< ::std::mutex > lock( ::CanvasMutex );
-            ::CanvasCondition.wait( lock, []{ return ( !::PauseDraw || !::lastpause ) && ::CanvasBool.load(); } );
-            ::CanvasBool = false;
 
-            if ( ::lastpause != ::PauseDraw ) {
-                ::lastpause = ::PauseDraw;
-
-                ::Input::clicks.clear();
-                for ( ::size_t i = 0; i < WINWIDTH * WINHEIGHT; ++i )
-                    ::Canvas[ i ] = COLORALPHA;
-            }
+            static bool lastpause = false;
 
             ::std::this_thread::sleep_for( ::std::chrono::milliseconds( 10 ) );
 
-            ::RenderFrame();
+            if ( ::PauseDraw ) {
+                if ( !lastpause ) {
+                    ::Input::clicks.clear();
+                    for ( ::size_t i = 0; i < WINWIDTH * WINHEIGHT; ++i )
+                        ::Canvas[ i ] = COLORALPHA;
+                    
+                    ::RenderFrame();
+                }
+            } else {
+                for ( ::UI* i : ::UI::Registry() )
+                    i->Draw();
+
+                ::RenderFrame();
+            }
+
+            lastpause = ::PauseDraw;
         }
     );
 

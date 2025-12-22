@@ -1,7 +1,5 @@
 #include "../audio/audio.hpp"
 
-int lasttile = -1;
-
 ::std::vector< ::uint32_t >& GetDisplay() {
     switch ( ::GridType ) {
         case ::GridTypes::Queue: return ::Saved::Queue;
@@ -13,16 +11,7 @@ int lasttile = -1;
     }
 }
 
-::uint8_t GetChannels( ::uint32_t entry ) {
-    switch ( ::GridType ) {
-        case ::GridTypes::Mixer: return 4;
-        case ::GridTypes::Apps: return 4;
-        case ::GridTypes::Webs: return 4;
-        default: return 3;
-    }
-}
-
-::uint8_t* GetCover( ::uint32_t entry ) {
+::uint32_t* GetCover( ::uint32_t entry ) {
     switch ( ::GridType ) {
         case ::GridTypes::Mixer: return ::MixerEntries[ entry ].minicover;
         case ::GridTypes::Apps: return ::Saved::AppsPath[ entry ].img;
@@ -106,7 +95,6 @@ void DrawSlide() {
     ::DrawBox(
         r,
         COLORGHOST,
-        l,
         ::Input::Click{
             .lmb = []() { ::DisplayOffset = ::std::max( ( int )::Saved::Songs.size() - grid, grid ) * ( ::Input::mouse.x / ( double )MIDPOINT ); },
             .rmb = []() { ::DisplayOffset = 0;  },
@@ -116,42 +104,31 @@ void DrawSlide() {
 
     r.l = ( int )( ( ::MIDPOINT - SPACING * 2 ) * ( ::DisplayOffset / ( ::std::max( ( int )Display.size() - grid, grid ) + 1.0f ) ) );
     r.r = r.l + SPACING * 2;
-    l = 1.0f;
-    ::DrawBox( r, COLORCORAL, l );
+    ::DrawBox( r, COLORCORAL );
 }
 
 struct Grid : ::UI {
-    void Draw( ::DrawType dt ) {
+    void Draw() {
         ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
         ::std::vector< ::uint32_t >& display = ::GetDisplay();
 
         ::DisplayOffset = ::std::clamp( ::DisplayOffset, 0, ::std::max( 0, ( int )display.size() - COLUMNS * ROWS ) );
 
-        if ( dt > ::DrawType::Normal || ::DisplayOffset != ::lasttile ) {
-            ::DrawSlide();
+        ::DrawSlide();
 
-            for ( int i = 0; i < COLUMNS * ROWS; i++ ) {
-                int loc = i + ::DisplayOffset;
-                ::Rect rect { ( MINICOVER + SPACING ) * ( i % COLUMNS ), ( MINICOVER + SPACING ) * ( i / COLUMNS ), MINICOVER };
+        for ( int i = 0; i < COLUMNS * ROWS; i++ ) {
+            int loc = i + ::DisplayOffset;
+            ::Rect rect { ( MINICOVER + SPACING ) * ( i % COLUMNS ), ( MINICOVER + SPACING ) * ( i / COLUMNS ), MINICOVER };
 
-                if ( loc >= display.size() ) {
-                    float l = 1.0f;
-                    ::DrawBox( rect, COLORALPHA, l );
-                } else
-                    ::DrawImage(
-                        rect,
-                        ::GetCover( display[ loc ] ),
-                        1.0f,
-                        ::GetClick( display[ loc ] ),
-                        ::GetChannels( display[ loc ] )
-                    );
+            if ( loc >= display.size() )
+                ::DrawBox( rect, COLORALPHA );
+            else
+                ::DrawImage( rect, ::GetCover( display[ loc ] ), ::GetClick( display[ loc ] ) );
 
-                if ( rect == ::Input::hover )
-                    ::GetDisplay( display[ loc ] );
-            }
+            if ( rect == ::Input::hover )
+                ::GetDisplay( display[ loc ] );
         }
-        ::lasttile = ::DisplayOffset;
     }
 };
 ::Grid Grid;

@@ -6,9 +6,7 @@ namespace Input {
         { VK_HOME, []( bool down ) {
             if ( down ) {
                 if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
-                    if ( ( ::PauseDraw = !::PauseDraw ) )
-                        ::InitiateDraw();
-                    else ::Draw( ::DrawType::Redo );
+                    ::PauseDraw = !::PauseDraw;
                 else
                     if ( ( ::PauseAudio = !::PauseAudio ) )
                         ::SetThreadExecutionState( ES_CONTINUOUS );

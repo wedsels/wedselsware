@@ -7,40 +7,72 @@ void SetPixel( int x, int y, ::uint32_t color ) {
     ::Canvas[ y * WINWIDTH + x ] = color;
 }
 
-void CheckClick( ::Rect r, float* light, ::std::optional< ::Input::Click > c ) {
-    if ( c ) {
-        ::Input::Click::create( r, *c );
-        if ( light && ::Input::hover == r )
-            *light *= 0.5f;
-    } else ::Input::clicks.erase( r );
+void DrawBorder( ::Rect r, ::uint32_t b ) {
+    if ( r.b > WINHEIGHT )
+        r.b = WINHEIGHT;
+    if ( r.r > WINWIDTH )
+        r.r = WINWIDTH;
+
+    int width = r.r - r.l;
+    int height = r.b - r.t;
+
+    ::std::fill_n( ::Canvas + r.t * WINWIDTH + r.l, width, b );
+    ::std::fill_n( ::Canvas + ( r.b - 1 ) * WINWIDTH + r.l, width, b );
+
+    for ( int y = 0; y < height; y++ ) {
+        ::Canvas[ ( r.t + y ) * WINWIDTH + r.l ] = b;
+        ::Canvas[ ( r.t + y ) * WINWIDTH + r.r - 1 ] = b;
+    }
 }
 
-void DrawBox( ::Rect t, ::uint32_t b, float& light, ::std::optional< ::Input::Click > c ) {
-    int width = t.r - t.l;
-    int height = t.b - t.t;
+void CheckClick( ::Rect r, ::std::optional< ::Input::Click > c ) {
+    if ( c )
+        ::Input::Click::create( r, *c );
+    else
+        ::Input::clicks.erase( r );
 
-    ::CheckClick( t, &light, c );
+    if ( ::Input::hover == r )
+        ::DrawBorder( r, COLORCOLD );
+}
+
+void DrawBox( ::Rect r, ::uint32_t b, ::std::optional< ::Input::Click > c ) {
+    if ( r.b > WINHEIGHT )
+        r.b = WINHEIGHT;
+    if ( r.r > WINWIDTH )
+        r.r = WINWIDTH;
+
+    int width = r.r - r.l;
+    int height = r.b - r.t;
 
     for ( int y = 0; y < height; y++ )
-        for ( int x = 0; x < width; x++ ) {
-            int cx = t.l + x;
-            int cy = t.t + y;
+        ::std::fill_n(
+            ::Canvas + ( r.t + y ) * WINWIDTH + r.l,
+            width,
+            b
+        );
 
-            if ( cx < 0 || cx >= WINWIDTH || cy < 0 || cy >= WINHEIGHT )
-                continue;
-
-            ::SetPixel( cx, cy, ::Multiply( b, light ) );
-        }
+    ::CheckClick( r, c );
 }
 
-void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< ::Input::Click > c, ::uint8_t channels ) {
-    int size = r.r - r.l;
+void DrawImage( ::Rect r, ::uint32_t* img, ::std::optional< ::Input::Click > c ) {
+    if ( r.b > WINHEIGHT )
+        r.b = WINHEIGHT;
+    if ( r.r > WINWIDTH )
+        r.r = WINWIDTH;
 
-    ::CheckClick( r, &light, c );
+    int width = r.r - r.l;
+    int height = r.b - r.t;
 
-    for ( int y = 0; y < size; y++ )
-        for ( int x = 0; x < size; x++ )
-            ::SetPixel( r.l + x, r.t + y, ::ImagePixelColor( img, x, y, size, channels, light ) );
+    if ( ::EmptyImage( img, width ) )
+        ::DrawBox( r, COLORGHOST );
+    else for ( int y = 0; y < height; y++ )
+        ::std::memcpy(
+            ::Canvas + ( r.t + y ) * WINWIDTH + r.l,
+            img + y * width,
+            width * sizeof( ::uint32_t )
+        );
+
+    ::CheckClick( r, c );
 }
 
 void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c ) {
@@ -65,29 +97,6 @@ void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< 
 
         if ( i == ' ' )
             ox += FONTSPACE;
-    }
-}
-
-void Render( ::DrawType dt ) {
-    for ( ::UI* i : ::UI::Registry() )
-        i->Draw( dt );
-
-    ::InitiateDraw();
-}
-
-void Draw( ::DrawType dt ) {
-    if ( ::PauseDraw )
-        return;
-
-    switch ( dt ) {
-        case ::DrawType::None:
-            break;
-        case ::DrawType::Normal:
-                ::Render( dt );
-            break;
-        case ::DrawType::Redo:
-                ::Render( dt );
-            break;
     }
 }
 

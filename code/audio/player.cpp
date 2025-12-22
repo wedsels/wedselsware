@@ -2,7 +2,7 @@
 
 #include <array>
 
-constexpr int BANDS = WINHEIGHT / 2;
+constexpr int BANDS = WINHEIGHT;
 
 ::uint16_t Bands[ ::BANDS ];
 
@@ -21,82 +21,54 @@ void Seek( int time ) {
 }
 
 void Waveform( double* data, ::uint32_t frames ) {
-    double samples = ( double )frames / ::BANDS;
-    ::std::vector< double > amplitudes( ::BANDS, 0.0 );
+    static const double width = WINWIDTH - ::MIDPOINT;
+    static const double alpha = 0.2;
+    static double smooth[ ::BANDS ];
 
-    for ( int bar = 0; bar < ::BANDS; ++bar ) {
-        int start = ::std::floor( bar * samples );
-        int end = ::std::ceil( ( bar + 1 ) * samples );
+    double output[ ::BANDS ];
+    double samples = ( double )frames / ::BANDS;
+
+    double v = ::Saved::Volumes[ ::Saved::Playing ];
+    int off = ::cursor * 100.0;
+
+    for ( int i = 0; i < ::BANDS; ++i ) {
+        int start = ( int )( i * samples );
+        int end = ( int )( ( i + 1 ) * samples );
 
         double sum = 0.0;
-        int count = 0;
+        for ( int j = start; j < end && j < frames; ++j )
+            sum += data[ j ] * data[ j ];
 
-        for ( int i = start; i < end && i < frames; ++i ) {
-            sum += ::std::abs( data[ i ] );
-            ++count;
-        }
+        output[ i ] = ::std::sqrt( sum / ( end - start ) );
+        smooth[ i ] = alpha * output[ i ] + ( 1.0 - alpha ) * smooth[ i ];
 
-        if ( count > 0 )
-            amplitudes[ bar ] = sum / count;
-    }
-
-    static double smooth[ ::BANDS ];
-    static const double smoothfactor = 0.25;
-
-    for ( int i = 0; i < ::BANDS; ++i ) {
-        smooth[ i ] =
-            smoothfactor * amplitudes[ i ] + ( 1.0 - smoothfactor ) * smooth[ i ];
-        amplitudes[ i ] = smooth[ i ];
-    }
-
-    static double max = 0.00000001;
-    static const double decay = 0.9;
-
-    max = ::std::max( max * decay, *::std::max_element( amplitudes.begin(), amplitudes.end() ) );
-
-    if ( max > 0 )
-        for ( auto& amp : amplitudes )
-            amp /= max;
-
-    for ( int i = 0; i < ::BANDS; ++i ) {
-        int w = ::std::clamp( WINWIDTH / 2.0 * ( amplitudes[ i ] * 0.5 ) * ::Saved::Volumes[ ::Saved::Playing ], 1.0, ( WINWIDTH - ::MIDPOINT ) / 2.0 );
-
-        if ( w == ::Bands[ i ] )
-            continue;
+        int w = ::std::clamp( width * ( smooth[ i ] * 1e5 ) * v, 1.0, width );
 
         int change = ::Bands[ i ] - w;
-        if ( change > 0 )
-            for ( int x = w; x < w + change; x++ )
-                ::SetPixel( ::MIDPOINT + x * 2, ( ::BANDS - 1 - i ) * 2, COLORALPHA );
-        else {
-            int xoff = ::cursor * 50.0;
-            int yoff = ::cursor * 25.0;
-            for ( int x = 0; x < w; x++ )
-                ::SetPixel( ::MIDPOINT + x * 2, ( ::BANDS - 1 - i ) * 2, ::ImagePixelColor( ::Playing.Cover, x + xoff, ::BANDS - 1 - i + yoff, ::MIDPOINT ) );
-        }
+        if ( change > 0 ) {
+            int x = ::MIDPOINT + ( ::BANDS - 1 - i ) * WINWIDTH + w;
+            ::std::memset( ::Canvas + x, COLORALPHA, change * sizeof( ::uint32_t ) );
+        } else ::std::memcpy(
+            ::Canvas + ::MIDPOINT + ( ::BANDS - 1 - i ) * WINWIDTH,
+            ::Canvas + WINWIDTH * ( WINHEIGHT - ::MIDPOINT ) + WINWIDTH * ( ::MIDPOINT - 1 - ( i + off ) % ::MIDPOINT ),
+            w * sizeof( ::uint32_t )
+        );
 
         ::Bands[ i ] = w;
     }
 }
 
 void ClearBars() {
-    if ( ::Bands[ 0 ] > 0 ) {
-        for ( int i = 0; i < ::BANDS; i++ ) {
+    if ( ::Bands[ 0 ] > 0 )
+        for ( int i = 0; i < ::BANDS; i++ )
             if ( !::PauseDraw )
                 for ( int x = 0; x < ::Bands[ i ]; x++ )
-                    ::SetPixel( ::MIDPOINT + x * 2, ( ::BANDS - 1 - i ) * 2, COLORALPHA );
-            ::Bands[ i ] = 0;
-        }
-
-        if ( !::PauseDraw ) {
-            ::DrawCursor();
-            ::InitiateDraw();
-        }
-    }
+                    ::SetPixel( ::MIDPOINT + x, ( ::BANDS - 1 - i ), COLORALPHA );
+    
+    ::memset( ::Bands, 0, sizeof( ::Bands ) );
 }
 
 void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
-
     ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
     if ( ::PauseAudio || !::Playing.SWR ) {
@@ -143,12 +115,6 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
     else {
         ::Waveform( ( double* )output, framecount );
 
-        if ( lastsecond != ( int )::cursor )
-            ::Redraw( ::DrawType::Redo );
-        else {
-            ::DrawCursor();
-            ::InitiateDraw();
-        }
         lastsecond = ( int )::cursor;
     }
 

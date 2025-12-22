@@ -74,11 +74,9 @@ void SetMixers() {
                                 ::MixerEntries[ id ] = {};
                                 ::wcsncpy_s( ::MixerEntries[ id ].name, ::MINIPATH, name.c_str(), ::MINIPATH - 1 );
 
-                                ::uint8_t* icon = ::ArchiveHICON( p, MINICOVER );
-                                if ( icon ) {
-                                    ::MixerEntries[ id ].minicover[ ARRAYSIZE( ::MixerEntries[ id ].minicover ) - 1 ] = 255;
-                                    ::std::memcpy( ::MixerEntries[ id ].minicover, icon, ARRAYSIZE( ::MixerEntries[ id ].minicover ) - 1 );
-                                }
+                                ::uint32_t* icon = ::ArchiveHICON( p, MINICOVER );
+                                if ( icon )
+                                    ::std::memcpy( ::MixerEntries[ id ].minicover, icon, sizeof( ::MixerEntries[ id ].minicover ) );
                                 ::delete[] icon;
 
                                 ::instances[ id ] = {};

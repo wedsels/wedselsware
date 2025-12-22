@@ -39,7 +39,6 @@ void Mouse( int c, ::LPARAM l ) {
     }
 
     ::memset( ::DisplayInformation, 0, sizeof( ::DisplayInformation ) );
-    ::Draw( ::DrawType::Redo );
 }
 
 void Keyboard( int c, ::LPARAM l ) {
@@ -48,8 +47,6 @@ void Keyboard( int c, ::LPARAM l ) {
 
     if ( !up )
         ISAFECALL( key, l );
-
-    ::Draw( ::DrawType::Redo );
 }
 
 void SetState( ::DWORD key, bool down ) {
@@ -66,10 +63,8 @@ void SetState( ::DWORD key, bool down ) {
             bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
 
             if ( ::Input::globalkey.contains( key ) ) {
-                if ( ::Input::globalkey[ key ]( down ) ) {
-                    ::Redraw( ::DrawType::Redo );
+                if ( ::Input::globalkey[ key ]( down ) )
                     return -1;
-                }
             } else if ( !down && ::Input::State[ key ].load( ::std::memory_order_relaxed ) || !::Input::hover.empty() ) {
                 ::SetState( key, down );
                 BLOCKCALL( key, WM_KEYBOARD, ( ( ::KBDLLHOOKSTRUCT* )lParam )->vkCode );

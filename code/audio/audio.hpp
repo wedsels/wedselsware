@@ -20,7 +20,7 @@ struct Play {
     ::AVPacket* Packet;
     ::AVFrame* Frame;
     ::uint16_t Duration;
-    ::uint8_t Cover[ MIDPOINT * MIDPOINT * 3 + 1 ];
+    ::uint32_t Cover[ ::MIDPOINT * ::MIDPOINT ];
     ::HANDLE File;
     double Timebase;
     int Samplerate;
@@ -38,7 +38,7 @@ struct media {
     ::uint64_t Write;
     ::uint32_t ID;
     ::uint16_t Duration;
-    ::uint8_t Minicover[ MINICOVER * MINICOVER * 3 + 1 ];
+    ::uint32_t Minicover[ MINICOVER * MINICOVER ];
     ::size_t Size;
     int Samplerate;
     int Bitrate;
@@ -51,7 +51,7 @@ enum struct SortTypes { Time, Artist, Title, Count };
 
 struct Launch {
     wchar_t path[ MAX_PATH ];
-    ::uint8_t img[ MINICOVER * MINICOVER * 4 + 1 ];
+    ::uint32_t img[ MINICOVER * MINICOVER ];
 };
 
 extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
@@ -60,7 +60,7 @@ extern void UpdateDirectories( ::MSG& msg );
 
 struct Volume {
     wchar_t name[ ::MINIPATH ];
-    ::uint8_t minicover[ MINICOVER * MINICOVER * 4 + 1 ];
+    ::uint32_t minicover[ MINICOVER * MINICOVER ];
 };
 inline ::std::unordered_map< ::uint32_t, ::Volume > MixerEntries;
 inline ::std::vector< ::uint32_t > MixersActive;
@@ -152,12 +152,10 @@ inline void Remove( ::uint32_t id ) {
     index = ::Index( ::Search, id );
     if ( index > -1 )
         ::Saved::Queue.erase( ::Saved::Queue.begin() + index );
-
-    ::Draw( ::DrawType::Redo );
 }
 
 inline void Clean( ::Play& Play ) {
-    ::std::memset( Play.Cover, 0, ARRAYSIZE( Play.Cover ) );
+    ::std::memset( Play.Cover, 0, sizeof( Play.Cover ) );
     if ( Play.Format ) ::avformat_close_input( &Play.Format );
     if ( Play.Codec ) ::avcodec_free_context( &Play.Codec );
     if ( Play.Packet ) ::av_packet_free( &Play.Packet );

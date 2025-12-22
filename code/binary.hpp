@@ -1,7 +1,11 @@
 #include "common.hpp"
 
+#define SERIALIZE( name ) do { if ( s.open( #name ) ) s.write( ::Saved::name ); } while ( 0 )
+#define DESERIALIZE( name ) do { if ( d.open( #name ) ) d.read( ::Saved::name ); } while ( 0 )
+
 struct Serializer {
-    ::std::ofstream file = ::std::ofstream( "wedselsdata", ::std::ios::binary );
+    ::std::ofstream file;
+    inline bool open( const char* name ) { return ( bool )( file = ::std::ofstream( name, ::std::ios::binary ) ); }
 
     template< typename T >
     typename ::std::enable_if< ::std::is_trivially_copyable< T >::value, void >::type
@@ -27,7 +31,8 @@ struct Serializer {
 };
 
 struct Deserializer {
-    ::std::ifstream file = ::std::ifstream( "wedselsdata", ::std::ios::binary );
+    ::std::ifstream file;
+    inline bool open( const char* name ) { return ( bool )( file = ::std::ifstream( name, ::std::ios::binary ) ); }
 
     template< typename T >
     typename ::std::enable_if< ::std::is_trivially_copyable< T >::value, void >::type

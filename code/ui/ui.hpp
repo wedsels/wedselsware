@@ -28,12 +28,12 @@
 
 inline constexpr int MIDPOINT = ( MINICOVER + SPACING ) * COLUMNS - SPACING;
 
-inline ::std::atomic< ::uint32_t > Canvas[ WINWIDTH * WINHEIGHT ];
+inline ::uint32_t Canvas[ WINWIDTH * WINHEIGHT ];
 
 inline ::std::wstring Searching;
 inline ::std::vector< ::uint32_t > Search;
 
-inline ::std::atomic< bool > PauseDraw = true;
+inline bool PauseDraw = true;
 
 enum struct GridTypes { Songs, Queue, Search, Mixer, Apps, Webs, Count };
 inline ::GridTypes GridType = ::GridTypes::Songs;
@@ -46,49 +46,24 @@ inline ::std::atomic< bool > CanvasBool;
 inline ::std::condition_variable CanvasCondition;
 
 extern void RenderFrame();
-extern ::uint8_t* ResizeImage( ::uint8_t* data, int w, int h, int scale );
-extern ::uint8_t* ArchiveImage( const char* path, int size );
-extern ::uint8_t* ArchiveImage( uint8_t* imgdata, int size, int scale );
-extern ::uint8_t* ArchiveHICON( ::LPCWSTR path, int size );
+extern ::uint32_t* ResizeImage( ::uint32_t* data, int w, int h, int scale );
+extern ::uint32_t* ArchiveImage( const char* path, int size );
+extern ::uint32_t* ArchiveImage( ::uint8_t* imgdata, int size, int scale );
+extern ::uint32_t* ArchiveHICON( ::LPCWSTR path, int size );
 
 extern int TextWidth( ::std::wstring& text );
 
-extern void DrawCursor();
-
 extern void SetPixel( int x, int y, ::uint32_t color );
-extern void Draw( ::DrawType dt );
-extern void DrawBox( ::Rect t, ::uint32_t b, float& light, ::std::optional< ::Input::Click > c = {} );
-extern void DrawImage( ::Rect r, ::uint8_t* img, float light, ::std::optional< ::Input::Click > c = {}, ::uint8_t channels = 3 );
+extern void DrawBox( ::Rect t, ::uint32_t b, ::std::optional< ::Input::Click > c = {} );
+extern void DrawImage( ::Rect r, ::uint32_t* img, ::std::optional< ::Input::Click > c = {} );
 extern void DrawString( int x, int y, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c = {} );
-extern void CheckClick( ::Rect r, float* light, ::std::optional< ::Input::Click > c );
+extern void CheckClick( ::Rect r, ::std::optional< ::Input::Click > c );
 
-extern ::uint32_t ImagePixelColor( ::uint8_t* img, int x, int y, int size, int channels = 3, float light = 1.0f );
-
-inline ::uint32_t BGRA( ::uint8_t r, ::uint8_t g, ::uint8_t b, ::uint8_t a = 255, float light = 1.0f ) {
-    float alpha = a / 255.0f;
-    return ( ::uint8_t )( b * light * alpha ) | ( ( ::uint8_t )( g * light * alpha ) << 8 ) | ( ( ::uint8_t )( r * light * alpha ) << 16 ) | ( ( a ) << 24 );
-}
-
-inline ::uint32_t Multiply( ::uint32_t color, float mult ) {
-    ::uint8_t b = ( color & 0x000000FF );
-    ::uint8_t g = ( color & 0x0000FF00 ) >> 8;
-    ::uint8_t r = ( color & 0x00FF0000 ) >> 16;
-    ::uint8_t a = ( color & 0xFF000000 ) >> 24;
-
-    return ::BGRA( r, g, b, a, mult );
-}
-
-inline ::uint32_t SetAlpha( ::uint32_t color, ::uint8_t alpha ) {
-    return ( color & 0x00FFFFFF ) | ( alpha << 24 );
-}
-
-inline void InitiateDraw() {
-    ::CanvasBool = true;
-    ::CanvasCondition.notify_one();
-}
-
-inline void Redraw( ::DrawType dt = ::DrawType::Normal ) {
-    ::Message( WM_REDRAW, ( int )dt, NULL );
+inline bool EmptyImage( const ::uint32_t* img, ::size_t s ) {
+    for ( ::size_t i = 0; i < s; ++i )
+        if ( img[ i ] != 0 )
+            return false;
+    return true;
 }
 
 struct UI {
@@ -108,7 +83,7 @@ struct UI {
     virtual ~UI() = default;
 
     virtual void Initialize() {}
-    virtual void Draw( ::DrawType dt ) {}
+    virtual void Draw() {}
 };
 
 struct Font {

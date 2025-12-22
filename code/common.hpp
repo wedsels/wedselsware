@@ -24,11 +24,10 @@
 
 #define WM_QUEUENEXT ( WM_USER + 1 )
 #define WM_KEYBOARD ( WM_USER + 2 )
-#define WM_REDRAW ( WM_USER + 3 )
-#define WM_ACTION ( WM_USER + 4 )
-#define WM_DEVICE ( WM_USER + 5 )
-#define WM_MIXER ( WM_USER + 6 )
-#define WM_MOUSE ( WM_USER + 7 )
+#define WM_ACTION ( WM_USER + 3 )
+#define WM_DEVICE ( WM_USER + 4 )
+#define WM_MIXER ( WM_USER + 5 )
+#define WM_MOUSE ( WM_USER + 6 )
 
 inline ::HWND hwnd;
 inline ::HWND desktophwnd;
@@ -184,8 +183,6 @@ namespace std {
     struct hash< ::Rect > { int operator()( const ::Rect& r ) const { return ( ( ( r.l ^ ( r.t << 1 ) ) ^ ( r.r << 1 ) ) ^ ( r.b << 1 ) ); } };
 }
 
-enum struct DrawType { None, Normal, Redo };
-
 namespace Input {
     inline ::Rect hover;
 
@@ -201,8 +198,6 @@ namespace Input {
     extern ::std::unordered_map< ::DWORD, ::std::function< bool( bool ) > > globalkey;
 
     struct Click {
-        ::DrawType intensity = ::DrawType::Redo;
-
         ::std::function< void() > hvr;
         ::std::function< void() > lmb;
         ::std::function< void() > rmb;

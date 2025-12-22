@@ -7,59 +7,88 @@
 
 #include <shellapi.h>
 
-::uint32_t ImagePixelColor( ::uint8_t* img, int x, int y, int size, int channels, float light ) {
-    if ( !img[ size * size * channels ] )
-        return ::Multiply( COLORGHOST, light );
+::uint8_t* To8Bit( ::uint32_t* src, int width, int height ) {
+    ::uint8_t* ret = ::new ::uint8_t[ width * height * ::STBIR_RGBA ];
 
-    int index = ( ( ( y % size ) + size ) % size * size + ( ( x % size ) + size ) % size ) * channels;
+    for ( int i = 0; i < width * height; i++ ) {
+        ::uint32_t c = src[ i ];
 
-    ::uint8_t r = img[ index + 0 ];
-    ::uint8_t g = img[ index + 1 ];
-    ::uint8_t b = img[ index + 2 ];
-    ::uint8_t a = ( channels == 4 ) ? ( ::uint8_t )( img[ index + 3 ] * light ) : 255;
-
-    return ::BGRA( r, g, b, a, light );
-}
-
-::uint8_t* ResizeImage( ::uint8_t* data, int w, int h, int scale ) {
-    if ( !data ) return nullptr;
-
-    ::uint8_t* img = ::new ::uint8_t[ scale * scale * ::STBIR_RGB ];
-
-    if ( !::stbir_resize_uint8_linear( data, w, h, 0, img, scale, scale, 0, ::STBIR_RGB ) ) {
-        ::delete[] img;
-        img = nullptr;
+        ret[ i * 4 + 0 ] = ( c >> 16 ) & 0xFF;
+        ret[ i * 4 + 1 ] = ( c >> 8 ) & 0xFF;
+        ret[ i * 4 + 2 ] = c & 0xFF;
+        ret[ i * 4 + 3 ] = ( c >> 24 ) & 0xFF;
     }
 
-    return img;
+    return ret;
 }
 
-::uint8_t* ProcessImage( ::uint8_t* data, int w, int h, int scale ) {
+::uint32_t* To32Bit( ::uint8_t* data, int w, int h ) {
+    ::uint32_t* ret = ::new ::uint32_t[ w * h ];
+
+    for ( int y = 0; y < h; y++ )
+        for ( int x = 0; x < w; x++ ) {
+            int i = ( y * w + x ) * 4;
+            ret[ y * w + x ] = ( data[ i + 3 ] << 24 ) | ( data[ i + 2 ] << 16 ) | ( data[ i + 1 ] << 8 ) | data[ i + 0 ];
+        }
+
+    return ret;
+}
+
+::uint32_t* ResizeImage( ::uint32_t* data, int w, int h, int scale ) {
     if ( !data ) return nullptr;
 
-    ::uint8_t* img = ::ResizeImage( data, w, h, scale );
+    ::uint8_t* in = ::To8Bit( data, w, h );
+    ::uint8_t* img = ::new ::uint8_t[ scale * scale * ::STBIR_RGBA ];
+
+    if ( !::stbir_resize_uint8_linear( in, w, h, 0, img, scale, scale, 0, ::STBIR_RGBA ) ) {
+        ::delete[] in;
+        in = nullptr;
+        ::delete[] img;
+        img = nullptr;
+
+        return nullptr;
+    }
+
+    ::uint32_t* ret = ::To32Bit( img, scale, scale );
+
+    ::delete[] in;
+    in = nullptr;
+    ::delete[] img;
+    img = nullptr;
+
+    return ret;
+}
+
+::uint32_t* ProcessImage( ::uint8_t* data, int w, int h, int scale ) {
+    if ( !data ) return nullptr;
+
+    ::uint32_t* in = ::To32Bit( data, w, h );
+    ::uint32_t* img = ::ResizeImage( in, w, h, scale );
+
+    ::delete[] in;
+    in = nullptr;
 
     ::stbi_image_free( data );
 
     return img;
 }
 
-::uint8_t* ArchiveImage( const char* path, int scale ) {
+::uint32_t* ArchiveImage( const char* path, int scale ) {
     int w, h, c;
-    ::uint8_t* data = ::stbi_load( path, &w, &h, &c, 0 );
+    ::uint8_t* data = ::stbi_load( path, &w, &h, &c, ::STBIR_RGBA );
 
     return ::ProcessImage( data, w, h, scale );
 }
 
-::uint8_t* ArchiveImage( ::uint8_t* imgdata, int size, int scale ) {
+::uint32_t* ArchiveImage( ::uint8_t* imgdata, int size, int scale ) {
     int w, h;
     if ( !imgdata ) return nullptr;
-    ::uint8_t* data = ::stbi_load_from_memory( imgdata, size, &w, &h, nullptr, ::STBIR_RGB );
+    ::uint8_t* data = ::stbi_load_from_memory( imgdata, size, &w, &h, nullptr, ::STBIR_RGBA );
 
     return ::ProcessImage( data, w, h, scale );
 }
 
-::uint8_t* ArchiveHICON( ::LPCWSTR path, int size ) {
+::uint32_t* ArchiveHICON( ::LPCWSTR path, int size ) {
     ::HICON icon;
 
     ::std::wstring p = path;
@@ -100,17 +129,19 @@
     ::DrawIconEx( hdc, 0, 0, icon, size, size, 0, NULL, DI_NORMAL );
 
     ::size_t dataSize = size * size * 4;
-    ::uint8_t* ret = ::new ::uint8_t[ dataSize ];
-    ::memcpy( ret, bits, dataSize );
-
-    for ( int i = 0; i < size * size; ++i )
-        ::std::swap( ret[ i * 4 + 0 ], ret[ i * 4 + 2 ] );
+    ::uint8_t* img = ::new ::uint8_t[ dataSize ];
+    ::memcpy( img, bits, dataSize );
 
     ::SelectObject( hdc, old );
     ::DeleteObject( hBitmap );
     ::DeleteDC( hdc );
 
     ::DestroyIcon( icon );
+
+    ::uint32_t* ret = ::To32Bit( img, size, size );
+
+    ::delete[] img;
+    img = nullptr;
 
     return ret;
 }
