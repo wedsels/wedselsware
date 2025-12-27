@@ -13,6 +13,7 @@ inline bool Loaded = false;
 void Save() {
     if ( !::Loaded )
         return;
+    ::Loaded = false;
 
     ::Serializer s;
 
@@ -31,6 +32,9 @@ void Save() {
 }
 
 void Load() {
+    if ( ::Loaded )
+        return;
+
     ::Deserializer d;
 
     DESERIALIZE( Apps );
@@ -46,7 +50,7 @@ void Load() {
     DESERIALIZE( Mixers );
     DESERIALIZE( Songs );
 
-    for ( auto& i : ::Saved::Songs )
+    for ( auto& i : ::Saved::Songs | ::std::views::reverse )
         if ( ::std::filesystem::exists( i.second.Path ) )
             ::display.push_back( i.first );
         else
@@ -94,6 +98,12 @@ void Load() {
         case WM_ACTION:
                 ( *( ::std::function< void() >* )( wParam ) )();
             return NULL;
+        case WM_DIRECTORYREMOVE:
+                ( *( ::std::function< void( ::uint32_t ) >* )( wParam ) )( ( ::uint32_t )lParam );
+            return NULL;
+        case WM_DIRECTORYADD:
+                ( *( ::std::function< void( const wchar_t* ) >* )( wParam ) )( ( const wchar_t* )lParam );
+            return NULL;
         case WM_DEVICE:
                 ::SetDefaultDevice();
             return NULL;
@@ -140,11 +150,13 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::signal( SIGSEGV, []( int ) { ::Save(); } );
     ::signal( SIGABRT, []( int ) { ::Save(); } );
 
-    // ::AllocConsole();
-    // ::FILE* fp;
-    // ::freopen_s( &fp, "CONOUT$", "w", stdout );
-    // ::freopen_s( &fp, "CONOUT$", "w", stderr );
-    // ::freopen_s( &fp, "CONIN$", "r", stdin );
+    ::AllocConsole();
+    ::consolehwnd = ::GetConsoleWindow();
+    ::ShowWindow( consolehwnd, SW_HIDE );
+    ::FILE* fp;
+    ::freopen_s( &fp, "CONOUT$", "w", stdout );
+    ::freopen_s( &fp, "CONOUT$", "w", stderr );
+    ::freopen_s( &fp, "CONIN$", "r", stdin );
 
     ::Load();
 

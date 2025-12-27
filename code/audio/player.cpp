@@ -1,6 +1,6 @@
 #include "audio.hpp"
 
-#include <array>
+#include <fftw3.h>
 
 constexpr int BANDS = WINHEIGHT;
 
@@ -22,27 +22,32 @@ void Seek( int time ) {
 
 void Waveform( double* data, ::uint32_t frames ) {
     static const double width = WINWIDTH - ::MIDPOINT;
+    double v = ::Saved::Volumes[ ::Saved::Playing ];
+    int off = ::cursor * 100.0;
+
     static const double alpha = 0.2;
     static double smooth[ ::BANDS ];
 
-    double output[ ::BANDS ];
+    double amp[ ::BANDS ];
     double samples = ( double )frames / ::BANDS;
-
-    double v = ::Saved::Volumes[ ::Saved::Playing ];
-    int off = ::cursor * 100.0;
 
     for ( int i = 0; i < ::BANDS; ++i ) {
         int start = ( int )( i * samples );
         int end = ( int )( ( i + 1 ) * samples );
 
         double sum = 0.0;
-        for ( int j = start; j < end && j < frames; ++j )
-            sum += data[ j ] * data[ j ];
+        for (int j = start; j < end && j < frames; ++j)
+            sum += data[ j ] * data[ j ] * v;
 
-        output[ i ] = ::std::sqrt( sum / ( end - start ) );
-        smooth[ i ] = alpha * output[ i ] + ( 1.0 - alpha ) * smooth[ i ];
+        amp[ i ] = ::log10( 1.0 + 99.0 * ::pow( ::std::sqrt( sum / ( end - start ) ), 0.5 ) ) / ::log10( 100 );
+    }
 
-        int w = ::std::clamp( width * ( smooth[ i ] * 1e5 ) * v, 1.0, width );
+    double max = 1e-10 + ::std::max( 1e-100, *::std::max_element( amp, amp + ::BANDS ) );
+
+    for ( int i = 0; i < ::BANDS; ++i ) {
+        smooth[ i ] = alpha * amp[ i ] / max + ( 1.0 - alpha ) * smooth[ i ];
+
+        int w = ::std::clamp( width * smooth[ i ] * 0.2, 1.0, width );
 
         int change = ::Bands[ i ] - w;
         if ( change > 0 ) {

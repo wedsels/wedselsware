@@ -28,7 +28,7 @@ void SetSong( ::uint32_t song ) {
     ::DisplayOffset = ::Index( ::display, s.ID );
 }
 
-::std::wstring NormalizeString( char str[] ) {
+::std::wstring NormalizeString( const char str[] ) {
     static const ::std::string invalid = "\\/:*?\"<>|.";
 
     ::std::string ret;
@@ -46,6 +46,7 @@ void SetSong( ::uint32_t song ) {
 
 void ArchiveSong( ::std::wstring p ) {
     static ::Play SecondPlay;
+    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
     ::Path( p );
 
@@ -58,9 +59,7 @@ void ArchiveSong( ::std::wstring p ) {
 
     ::media media = {};
 
-    ::std::filesystem::path path( p );
-
-    SecondPlay.File = ::CreateFileW( path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+    SecondPlay.File = ::CreateFileW( p.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
     if ( !SecondPlay.File )
         return::Clean( SecondPlay );
 
@@ -82,43 +81,41 @@ void ArchiveSong( ::std::wstring p ) {
     ::AVDictionaryEntry* tag = nullptr;
     while ( ( tag = ::av_dict_get( metadata, "", tag, AV_DICT_IGNORE_SUFFIX ) ) )
         if ( ::_stricmp( tag->key, "ARTIST" ) == 0 )
-            ::wcsncpy_s( media.Artist, MINIPATH, ::NormalizeString( tag->value ).c_str(), MINIPATH - 1 );
+            ::wcsncpy_s( media.Artist, _countof( media.Artist ), ::NormalizeString( tag->value ).c_str(), _TRUNCATE );
         else if ( ::_stricmp( tag->key, "TITLE" ) == 0 )
-            ::wcsncpy_s( media.Title, MINIPATH, ::NormalizeString( tag->value ).c_str(), MINIPATH - 1 );
+            ::wcsncpy_s( media.Title, _countof( media.Title ), ::NormalizeString( tag->value ).c_str(), _TRUNCATE );
         else if ( ::_stricmp( tag->key, "ALBUM" ) == 0 )
-            ::wcsncpy_s( media.Album, MINIPATH, ::NormalizeString( tag->value ).c_str(), MINIPATH - 1 );
+            ::wcsncpy_s( media.Album, _countof( media.Album ), ::NormalizeString( tag->value ).c_str(), _TRUNCATE );
 
-    ::wcsncpy_s( media.Encoding, 4, path.extension().wstring().c_str(), 4 - 1 );
+    ::wcsncpy_s( media.Encoding, _countof( media.Encoding ), SecondPlay.Encoding.c_str(), _TRUNCATE );
 
     ::std::wstring dir = ::String::WConcat( SongPath, media.Artist, L"/", media.Album, L"/" );
 
     if ( !::std::filesystem::is_directory( dir ) )
         ::std::filesystem::create_directories( dir );
 
-    ::std::wstring name = ::String::WConcat( media.Title, media.Encoding );
-    ::std::wstring expected = ::String::WConcat( dir, name );
+    ::std::wstring expected = ::String::WConcat( dir, media.Title, L'.', media.Encoding );
+    ::Path( expected );
 
-    if ( path.wstring() != expected && ::std::filesystem::exists( ::String::WConcat( dir, name ) ) )
-        expected = ::String::WConcat( dir, media.Title, L" - ", media.Write, media.Encoding );
+    if ( p != expected && ::std::filesystem::exists( expected ) )
+        expected = ::String::WConcat( dir, media.Title, L" - ", media.Write, L'.', media.Encoding );
 
     ::Path( expected );
 
-    if ( path.wstring() != expected )
-        ::std::filesystem::rename( path.wstring(), expected );
+    if ( p != expected )
+        ::std::filesystem::rename( p, expected );
 
     media.Samplerate = SecondPlay.Samplerate;
     media.Duration = SecondPlay.Duration;
     media.Bitrate = SecondPlay.Bitrate;
-    media.Size = ::std::filesystem::file_size( expected ) / 1000000;
+    media.Size = ::std::filesystem::file_size( expected ) / 1e6;
     media.ID = ::String::Hash( expected );
     ::wcsncpy_s( media.Path, MAX_PATH, expected.c_str(), MAX_PATH - 1 );
 
-    // if ( SecondPlay.Cover[ ARRAYSIZE( SecondPlay.Cover ) - 1 ] ) {
-        ::uint32_t* mini = ::ResizeImage( SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
-        if ( mini )
-            ::std::memcpy( media.Minicover, mini, sizeof( media.Minicover ) );
-        ::delete[] mini;
-    // }
+    ::uint32_t* mini = ::ResizeImage( SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
+    if ( mini )
+        ::std::memcpy( media.Minicover, mini, sizeof( media.Minicover ) );
+    ::delete[] mini;
 
     ::Clean( SecondPlay );
 
@@ -195,6 +192,9 @@ static int rpacket( void* opaque, ::uint8_t* buf, int bufsize ) {
         return E_FAIL;
 
     HR( ::avformat_find_stream_info( play.Format, 0 ) );
+
+    if ( play.Format->iformat )
+        play.Encoding = ::NormalizeString( play.Format->iformat->name );
 
     for ( unsigned int i = 0; i < play.Format->nb_streams; i++ ) {
         ::AVStream* stream = play.Format->streams[ i ];

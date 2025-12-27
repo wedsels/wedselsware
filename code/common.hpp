@@ -13,6 +13,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
+#include <ranges>
 #include <mutex>
 #include <map>
 
@@ -20,15 +21,18 @@
 #define HER( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
 #define THREAD( body ) do { ::std::thread( [ = ] { body } ).detach(); } while ( 0 )
 
-#define WM_QUEUENEXT ( WM_USER + 1 )
-#define WM_KEYBOARD ( WM_USER + 2 )
-#define WM_ACTION ( WM_USER + 3 )
-#define WM_DEVICE ( WM_USER + 4 )
-#define WM_MIXER ( WM_USER + 5 )
-#define WM_MOUSE ( WM_USER + 6 )
+#define WM_DIRECTORYREMOVE ( WM_USER + 1 )
+#define WM_DIRECTORYADD ( WM_USER + 2 )
+#define WM_QUEUENEXT ( WM_USER + 3 )
+#define WM_KEYBOARD ( WM_USER + 4 )
+#define WM_ACTION ( WM_USER + 5 )
+#define WM_DEVICE ( WM_USER + 6 )
+#define WM_MIXER ( WM_USER + 7 )
+#define WM_MOUSE ( WM_USER + 8 )
 
 inline ::HWND hwnd;
 inline ::HWND desktophwnd;
+inline ::HWND consolehwnd;
 
 extern ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
 extern ::HRESULT InitializeMixer();
@@ -122,6 +126,9 @@ inline void Execute( ::std::wstring str, int type = 0 ) {
 
 template < typename T >
 inline int Index( ::std::vector< T >& list, const T& item  ) {
+    if ( !item || list.empty() )
+        return -1;
+
     auto it = ::std::find( list.begin(), list.end(), item );
 
     if ( it != list.end() )

@@ -18,7 +18,7 @@
 #define COLUMNS 9
 #define ROWS 12
 #define FONTHEIGHT 24
-#define FONTSPACE ( FONTHEIGHT / 3 )
+#define FONTSPACE ( FONTHEIGHT / 3.0 )
 #define WINLEFT 3440
 #define WINTOP 0
 #define WINWIDTH 2560

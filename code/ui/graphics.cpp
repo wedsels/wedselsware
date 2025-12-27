@@ -26,6 +26,9 @@
 ::ID3D11RenderTargetView* RenderView = nullptr;
 ::ID3D11ShaderResourceView* ResourceView = nullptr;
 
+::D3D11_MAPPED_SUBRESOURCE Mapped;
+::uint32_t* MappedData = nullptr;
+
 struct Vertex {
     float pos[ 2 ];
     float uv[ 2 ];
@@ -34,33 +37,33 @@ struct Vertex {
 const char* g_vsCode = R"(
     struct VS_INPUT {
         float2 pos : POSITION;
-        float2 uv  : TEXCOORD;
+        float2 uv : TEXCOORD;
     };
 
     struct PS_INPUT {
         float4 pos : SV_POSITION;
-        float2 uv  : TEXCOORD;
+        float2 uv : TEXCOORD;
     };
 
-    PS_INPUT main(VS_INPUT input) {
+    PS_INPUT main( VS_INPUT input ) {
         PS_INPUT output;
-        output.pos = float4(input.pos, 0.0f, 1.0f);
+        output.pos = float4( input.pos, 0.0f, 1.0f );
         output.uv = input.uv;
         return output;
     }
 )";
 
 const char* g_psCode = R"(
-    Texture2D tex : register(t0);
-    SamplerState samp : register(s0);
+    Texture2D tex : register( t0 );
+    SamplerState samp : register( s0 );
 
     struct PS_INPUT {
         float4 pos : SV_POSITION;
-        float2 uv  : TEXCOORD;
+        float2 uv : TEXCOORD;
     };
 
-    float4 main(PS_INPUT input) : SV_TARGET {
-        return tex.Sample(samp, input.uv);
+    float4 main( PS_INPUT input ) : SV_TARGET {
+        return tex.Sample( samp, input.uv );
     }
 )";
 
@@ -197,36 +200,40 @@ const char* g_psCode = R"(
     return S_OK;
 }
 
-void RenderFrame() {
-    ::D3D11_MAPPED_SUBRESOURCE mapped;
-    if ( SUCCEEDED( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) ) {
-        ::uint32_t* dest = reinterpret_cast< ::uint32_t* >( mapped.pData );
-        for ( ::size_t i = 0; i < WINWIDTH * WINHEIGHT; ++i )
-            dest[ i ] = ::Canvas[ i ];
-        ::Context->Unmap( ::Texture, 0 );
-    }
-
-    ::Context->OMSetRenderTargets( 1, &::RenderView, nullptr );
-
-    ::D3D11_VIEWPORT vp = { 0, 0, WINWIDTH, WINHEIGHT, 0, 1 };
+::HRESULT InitFrame() {
+    ::D3D11_VIEWPORT vp = { 0.0f, 0.0f, WINWIDTH, WINHEIGHT, 0.0f, 1.0f };
     ::Context->RSSetViewports( 1, &vp );
 
     ::UINT stride = sizeof( ::Vertex );
     ::UINT offset = 0;
     ::Context->IASetVertexBuffers( 0, 1, &::Buffer, &stride, &offset );
-    ::Context->IASetInputLayout( ::Layout);
+    ::Context->IASetInputLayout( ::Layout );
     ::Context->IASetPrimitiveTopology( ::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
     ::Context->VSSetShader( ::VShader, nullptr, 0 );
     ::Context->PSSetShader( ::PShader, nullptr, 0 );
 
-    ::Context->PSSetShaderResources( 0, 1, &::ResourceView );
     ::Context->PSSetSamplers( 0, 1, &::Sampler );
 
+    ::Context->PSSetShaderResources( 0, 1, &::ResourceView );
+
+    HR( ::DCDevice->Commit() );
+
+    HR( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &::Mapped ) );
+
+    if ( !( ::MappedData = ( ::uint32_t* )::Mapped.pData ) )
+        return E_FAIL;
+
+    return S_OK;
+}
+
+void RenderFrame() {
+    ::std::memcpy( ::MappedData, ::Canvas, sizeof( ::Canvas ) );
+
+    ::Context->OMSetRenderTargets( 1, &::RenderView, nullptr );
     ::Context->Draw( 6, 0 );
 
     ::SwapChain->Present( 1, 0 );
-    ::DCDevice->Commit();
 }
 
 ::HRESULT InitGraphics() {
@@ -234,21 +241,21 @@ void RenderFrame() {
     HR( ::CreateDynamicTexture() );
     HR( ::CreateShadersAndQuad() );
     HR( ::InitDirectComposition() );
+    HR( ::InitFrame() );
 
     THREAD(
+        const auto period = ::std::chrono::duration_cast< ::std::chrono::steady_clock::duration >( ::std::chrono::duration< double >( 1.0 / 100.0 ) );
+        ::std::chrono::time_point next = ::std::chrono::steady_clock::now();
+
+        ::std::unique_lock< ::std::mutex > lock( ::CanvasMutex );
+
         while ( true ) {
-            ::std::unique_lock< ::std::mutex > lock( ::CanvasMutex );
-
-            static bool lastpause = false;
-
-            ::std::this_thread::sleep_for( ::std::chrono::milliseconds( 10 ) );
+            ::std::this_thread::sleep_until( next += period );
 
             if ( ::PauseDraw ) {
-                if ( !lastpause ) {
+                if ( ::Canvas[ 0 ] ) {
                     ::Input::clicks.clear();
-                    for ( ::size_t i = 0; i < WINWIDTH * WINHEIGHT; ++i )
-                        ::Canvas[ i ] = COLORALPHA;
-                    
+                    ::std::memset( ::Canvas, 0, sizeof( ::Canvas ) );
                     ::RenderFrame();
                 }
             } else {
@@ -257,8 +264,6 @@ void RenderFrame() {
 
                 ::RenderFrame();
             }
-
-            lastpause = ::PauseDraw;
         }
     );
 

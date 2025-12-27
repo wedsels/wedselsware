@@ -19,6 +19,7 @@ struct Play {
     ::SwrContext* SWR;
     ::AVPacket* Packet;
     ::AVFrame* Frame;
+    ::std::wstring Encoding;
     ::uint16_t Duration;
     ::uint32_t Cover[ ::MIDPOINT * ::MIDPOINT ];
     ::HANDLE File;
@@ -30,7 +31,7 @@ struct Play {
 inline Play Playing;
 
 struct media {
-    wchar_t Encoding[ 4 ];
+    wchar_t Encoding[ 8 ];
     wchar_t Artist[ ::MINIPATH ];
     wchar_t Album[ ::MINIPATH ];
     wchar_t Title[ ::MINIPATH ];
@@ -136,6 +137,8 @@ inline ::std::atomic< bool > PauseAudio = true;
 inline ::std::mutex PlayerMutex;
 
 inline void Remove( ::uint32_t id ) {
+    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
+
     if ( ::Saved::Songs.contains( id ) )
         ::Saved::Songs.erase( id );
 

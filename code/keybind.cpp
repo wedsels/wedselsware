@@ -43,7 +43,7 @@ namespace Input {
                 else if ( ::Input::State[ VK_MENU ].load( ::std::memory_order_relaxed ) )
                     ::SetDefaultDevice();
                 else if ( ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) )
-                    ::Seek( 0 );
+                    ::ShowWindow( ::consolehwnd, ::IsWindowVisible( ::consolehwnd ) ? SW_HIDE : SW_SHOW );
                 else
                     ::Execute( L"C:\\Program Files\\Mozilla Firefox\\firefox.exe" );
             }

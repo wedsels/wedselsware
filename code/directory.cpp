@@ -1,7 +1,5 @@
 #include "audio/audio.hpp"
 
-#include <ranges>
-
 struct Directory {
     const wchar_t* path;
     ::std::function< void( const wchar_t* ) > add;
@@ -148,16 +146,16 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
                     if ( ::std::filesystem::is_directory( fpath ) ) {
                         for ( auto& i : ::std::filesystem::recursive_directory_iterator( fpath ) )
                             if ( i.is_regular_file() && !i.is_symlink() && ::FileReady( i.path().wstring().c_str() ) )
-                                dir.add( i.path().wstring().c_str() );
+                                ::Message( WM_DIRECTORYADD, ( ::WPARAM )&dir.add, ( ::LPARAM )i.path().wstring().c_str() );
                     } else if ( ::FileReady( fpath.c_str() ) )
-                        dir.add( fpath.c_str() );
+                        ::Message( WM_DIRECTORYADD, ( ::WPARAM )&dir.add, ( ::LPARAM )fpath.c_str() );
                 } else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME ) {
                     if ( ::Saved::Songs.contains( ::String::Hash( fpath ) ) )
-                        dir.remove( ::String::Hash( fpath ) );
+                        ::Message( WM_DIRECTORYREMOVE, ( ::WPARAM )&dir.remove, ::String::Hash( fpath ) );
                     else
                         for ( auto& i : ::Saved::Songs | ::std::views::reverse )
                             if ( ::wcsstr( i.second.Path, fpath.c_str() ) )
-                                dir.remove( i.first );
+                                ::Message( WM_DIRECTORYREMOVE, ( ::WPARAM )&dir.remove, i.first );
                 }
             };
 

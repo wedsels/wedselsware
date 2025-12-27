@@ -28,7 +28,7 @@
     for ( int y = 0; y < h; y++ )
         for ( int x = 0; x < w; x++ ) {
             int i = ( y * w + x ) * 4;
-            ret[ y * w + x ] = ( data[ i + 3 ] << 24 ) | ( data[ i + 2 ] << 16 ) | ( data[ i + 1 ] << 8 ) | data[ i + 0 ];
+            ret[ y * w + x ] = ( data[ i + 3 ] << 24 ) | ( data[ i + 0 ] << 16 ) | ( data[ i + 1 ] << 8 ) | data[ i + 2 ];
         }
 
     return ret;
@@ -131,6 +131,9 @@
     ::size_t dataSize = size * size * 4;
     ::uint8_t* img = ::new ::uint8_t[ dataSize ];
     ::memcpy( img, bits, dataSize );
+
+    for ( int i = 0; i < size * size; ++i )
+        ::std::swap( img[ i * 4 + 0 ], img[ i * 4 + 2 ] );
 
     ::SelectObject( hdc, old );
     ::DeleteObject( hBitmap );

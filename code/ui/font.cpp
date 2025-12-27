@@ -17,7 +17,7 @@ int TextWidth( ::std::wstring& text ) {
 
 ::Font ArchiveFont( wchar_t c ) {
     if ( ::Font::Letters.find( c ) == ::Font::Letters.end() ) {
-        float scale = ::stbtt_ScaleForPixelHeight( &FontInfo, FONTHEIGHT );
+        float scale = ::stbtt_ScaleForPixelHeight( &::FontInfo, FONTHEIGHT );
 
         int width, height, xoff, yoff;
         unsigned char* bitmap = ::stbtt_GetCodepointBitmap( &::FontInfo, 0, scale, c, &width, &height, nullptr, nullptr );
@@ -28,7 +28,7 @@ int TextWidth( ::std::wstring& text ) {
         ::uint32_t* pixels = ::new ::uint32_t[ width * height ];
 
         for ( int i = 0; i < width * height; ++i )
-            pixels[ i ] = ( COLORGOLD & 0x00FFFFFF ) | ( bitmap[ i ] << 24 );
+            pixels[ i ] = ( COLORPALE & 0x00FFFFFF ) | ( bitmap[ i ] << 24 );
 
         ::stbtt_FreeBitmap( bitmap, nullptr );
 
@@ -51,11 +51,11 @@ int TextWidth( ::std::wstring& text ) {
     ::std::streamsize size = file.tellg();
     file.seekg( 0, ::std::ios::beg );
 
-    FontBuffer.resize( size );
-    if ( !file.read( ( char* )FontBuffer.data(), size ) )
+    ::FontBuffer.resize( size );
+    if ( !file.read( ( char* )::FontBuffer.data(), size ) )
         return E_FAIL;
 
-    if ( !::stbtt_InitFont( &FontInfo, FontBuffer.data(), 0 ) )
+    if ( !::stbtt_InitFont( &::FontInfo, ::FontBuffer.data(), 0 ) )
         return E_FAIL;
 
     return S_OK;
