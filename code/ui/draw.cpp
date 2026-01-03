@@ -7,8 +7,9 @@ void SetPixel( int x, int y, ::uint32_t color ) {
     ::Canvas[ y * WINWIDTH + x ] = color;
 }
 
-::uint32_t TimeColor( double t ) {
-    double phase = ::std::fmod( t, 1.0 );
+::uint32_t TimeColor() {
+    static const int cycle = 100;
+    double phase = ::std::fmod( ( double )( ::Frame % cycle ) / cycle, 1.0 );
     double r = 0.5 + 0.5 * ::std::sin( 2.0 * M_PI * phase );
     double g = 0.5 + 0.5 * ::std::sin( 2.0 * M_PI * phase + 2.1 );
     double b = 0.5 + 0.5 * ::std::sin( 2.0 * M_PI * phase + 4.2 );
@@ -45,7 +46,7 @@ void CheckClick( ::Rect r, ::std::optional< ::Input::Click > c ) {
         ::Input::clicks.erase( r );
 
     if ( ::Input::hover == r )
-        ::DrawBorder( r, ::TimeColor( ::cursor ) );
+        ::DrawBorder( r, ::TimeColor() );
 }
 
 void DrawBox( ::Rect r, ::uint32_t b, ::std::optional< ::Input::Click > c ) {
@@ -93,7 +94,7 @@ void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< 
     if ( tw <= width )
         ox += width / 2;
     else
-        ox += FONTSPACE * ::cursor * 10.0;
+        ox += FONTSPACE * ::Frame / 10.0;
 
     for ( wchar_t& i : s ) {
         ::Font f = ::ArchiveFont( i );

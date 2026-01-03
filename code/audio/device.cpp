@@ -1,6 +1,8 @@
 #include "audio.hpp"
 
 #define MINIAUDIO_IMPLEMENTATION
+#define MA_NO_ASSERT
+#define MA_NO_DEBUG_OUTPUT
 #include <miniaudio.h>
 
 #include <atlbase.h>
@@ -20,6 +22,7 @@ void SetVolume( double v ) {
 
 ::HRESULT SetDefaultDevice() {
     ::PauseAudio = true;
+
     ::ma_device_uninit( &::Device );
 
     ::ma_uint32 count;
@@ -48,6 +51,10 @@ void SetVolume( double v ) {
     ::Config = ::ma_device_config_init( ::ma_device_type_playback );
     ::Config.dataCallback = []( ::ma_device* device, void* output, const void* input, ::ma_uint32 framecount ) { ::Decode( device, ( ::uint8_t* )output, framecount ); };
     ::Config.stopCallback = []( ::ma_device* device ){ ::Message( WM_DEVICE, 0, 0 ); };
+    ::Config.playback.format = ma_format_f32;
+    ::Config.periodSizeInFrames = 0;
+    ::Config.sampleRate = 0;
+    ::Config.periods = 0;
 
     HR( ::SetDefaultDevice() );
 

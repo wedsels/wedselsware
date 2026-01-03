@@ -98,12 +98,6 @@ void Load() {
         case WM_ACTION:
                 ( *( ::std::function< void() >* )( wParam ) )();
             return NULL;
-        case WM_DIRECTORYREMOVE:
-                ( *( ::std::function< void( ::uint32_t ) >* )( wParam ) )( ( ::uint32_t )lParam );
-            return NULL;
-        case WM_DIRECTORYADD:
-                ( *( ::std::function< void( const wchar_t* ) >* )( wParam ) )( ( const wchar_t* )lParam );
-            return NULL;
         case WM_DEVICE:
                 ::SetDefaultDevice();
             return NULL;
@@ -124,7 +118,7 @@ void Load() {
     ::RegisterClassW( &wc );
 
     ::HWND hwnd = ::CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW,
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
         wc.lpszClassName,
         wc.lpszClassName,
         WS_POPUP | WS_VISIBLE,
@@ -132,12 +126,17 @@ void Load() {
         nullptr, nullptr, hInstance, nullptr
     );
 
-    ::SetWindowLongW( hwnd, GWL_EXSTYLE, ::GetWindowLongW( hwnd, GWL_EXSTYLE ) | WS_EX_NOACTIVATE );
     ::SetLayeredWindowAttributes( hwnd, 0, 255, LWA_ALPHA );
-    ::SetWindowPos( hwnd, HWND_TOPMOST, WINLEFT, WINTOP, WINWIDTH, WINHEIGHT, SWP_NOACTIVATE );
     ::ShowWindow( hwnd, SW_SHOW );
 
     return hwnd;
+}
+
+void CALLBACK OnTop( ::HWINEVENTHOOK, ::DWORD event, ::HWND hwnd, ::LONG idObject, ::LONG, ::DWORD, ::DWORD ) {
+    if ( event != EVENT_SYSTEM_FOREGROUND || idObject != OBJID_WINDOW || hwnd == nullptr )
+        return;
+
+    ::SetWindowPos( ::hwnd, HWND_TOPMOST, WINLEFT, WINTOP, WINWIDTH, WINHEIGHT, SWP_NOACTIVATE );
 }
 
 int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
@@ -149,6 +148,8 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::signal( SIGTERM, []( int ) { ::Save(); } );
     ::signal( SIGSEGV, []( int ) { ::Save(); } );
     ::signal( SIGABRT, []( int ) { ::Save(); } );
+
+    ::SetWinEventHook( EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr, ::OnTop, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS );
 
     ::AllocConsole();
     ::consolehwnd = ::GetConsoleWindow();
@@ -162,6 +163,8 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     ::hwnd = ::Window( hInstance );
     ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
+
+    ::std::shared_lock< ::std::shared_mutex > lock( ::CanvasMutex );
 
     HER( ::CoInitialize( NULL ) );
 

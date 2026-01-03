@@ -6,6 +6,7 @@
 
 #include <windows.h>
 #include <unordered_set>
+#include <shared_mutex>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -14,21 +15,18 @@
 #include <thread>
 #include <random>
 #include <ranges>
-#include <mutex>
 #include <map>
 
 #define HR( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
 #define HER( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
 #define THREAD( body ) do { ::std::thread( [ = ] { body } ).detach(); } while ( 0 )
 
-#define WM_DIRECTORYREMOVE ( WM_USER + 1 )
-#define WM_DIRECTORYADD ( WM_USER + 2 )
-#define WM_QUEUENEXT ( WM_USER + 3 )
-#define WM_KEYBOARD ( WM_USER + 4 )
-#define WM_ACTION ( WM_USER + 5 )
-#define WM_DEVICE ( WM_USER + 6 )
-#define WM_MIXER ( WM_USER + 7 )
-#define WM_MOUSE ( WM_USER + 8 )
+#define WM_QUEUENEXT ( WM_USER + 1 )
+#define WM_KEYBOARD ( WM_USER + 2 )
+#define WM_ACTION ( WM_USER + 3 )
+#define WM_DEVICE ( WM_USER + 4 )
+#define WM_MIXER ( WM_USER + 5 )
+#define WM_MOUSE ( WM_USER + 6 )
 
 inline ::HWND hwnd;
 inline ::HWND desktophwnd;
@@ -95,7 +93,10 @@ inline void Path( ::std::wstring& path ) {
     for ( auto& i : path )
         if ( i == L'\\' )
             i = L'/';
-        else i = ::toupper( i );
+        else if ( i == '\n' || i == '\r' )
+            i = ' ';
+        else
+            i = ::toupper( i );
 }
 
 template < typename... T >

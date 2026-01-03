@@ -67,7 +67,7 @@ void SetMixers() {
                         ::uint32_t id = ::String::Hash( name );
 
                         if ( !::Saved::Mixers.contains( id ) )
-                            ::Saved::Mixers[ id ] = 0.45;
+                            ::Saved::Mixers[ id ] = 0.25;
 
                         if ( !FAILED( pVolume->SetMasterVolume( ( float )::Saved::Mixers[ id ], NULL ) ) ) {
                             if ( !::MixerEntries.contains( id ) ) {

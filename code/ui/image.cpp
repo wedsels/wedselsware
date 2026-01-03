@@ -128,9 +128,8 @@
 
     ::DrawIconEx( hdc, 0, 0, icon, size, size, 0, NULL, DI_NORMAL );
 
-    ::size_t dataSize = size * size * 4;
-    ::uint8_t* img = ::new ::uint8_t[ dataSize ];
-    ::memcpy( img, bits, dataSize );
+    ::uint8_t* img = ::new ::uint8_t[ size * size * 4 ];
+    ::memcpy( img, bits, size * size * 4 );
 
     for ( int i = 0; i < size * size; ++i )
         ::std::swap( img[ i * 4 + 0 ], img[ i * 4 + 2 ] );

@@ -24,7 +24,7 @@
     switch ( ::GridType ) {
         case ::GridTypes::Mixer:
             return {
-                .scrl = [ entry ]( int dir ) { ::SetMixerVolume( entry, dir * -0.01 ); }
+                .scrl = [ entry ]( int dir ) { ::SetMixerVolume( entry, dir * -( 0.01 + 0.009 * ( int )::Input::State[ VK_SHIFT ] ) ); }
             };
         case ::GridTypes::Apps: return { .lmb = [ entry ]() { ::Execute( ::Saved::AppsPath[ entry ].path ); } };
         case ::GridTypes::Webs: return { .lmb = [ entry ]() { ::Execute( ::Saved::WebsPath[ entry ].path ); } };
@@ -108,8 +108,18 @@ void DrawSlide() {
 }
 
 struct Grid : ::UI {
+    int LastOffset;
+    ::GridTypes LastGrid = ::GridTypes::Count;
+    ::Rect LastHover;
+
+    void Clear() {
+        LastOffset = 0;
+        LastGrid = ::GridTypes::Count;
+    }
+
     void Draw() {
-        ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
+        if ( LastOffset == ::DisplayOffset && LastGrid == ::GridType && LastHover == ::Input::hover )
+            return;
 
         ::std::vector< ::uint32_t >& display = ::GetDisplay();
 
@@ -129,6 +139,9 @@ struct Grid : ::UI {
             if ( rect == ::Input::hover )
                 ::GetDisplay( display[ loc ] );
         }
+
+        LastOffset = ::DisplayOffset;
+        LastGrid = ::GridType;
+        LastHover = ::Input::hover;
     }
-};
-::Grid Grid;
+} Grid;

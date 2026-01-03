@@ -26,7 +26,12 @@
 
 inline constexpr int MIDPOINT = ( MINICOVER + SPACING ) * COLUMNS - SPACING;
 
-inline ::uint32_t Canvas[ WINWIDTH * WINHEIGHT ];
+inline ::uint32_t Frame;
+
+inline ::std::shared_mutex CanvasMutex;
+
+inline const ::uint32_t CanvasSize = WINWIDTH * WINHEIGHT * sizeof( ::uint32_t );
+inline ::uint32_t* Canvas;
 
 inline ::std::wstring Searching;
 inline ::std::vector< ::uint32_t > Search;
@@ -38,10 +43,6 @@ inline ::GridTypes GridType = ::GridTypes::Songs;
 inline int DisplayOffset = 0;
 inline ::std::function< ::std::wstring() > DisplayInformation[ ::MIDPOINT / ( FONTHEIGHT + SPACING ) ];
 extern ::std::vector< ::uint32_t >& GetDisplay();
-
-inline ::std::mutex CanvasMutex;
-inline ::std::atomic< bool > CanvasBool;
-inline ::std::condition_variable CanvasCondition;
 
 extern void RenderFrame();
 extern ::uint32_t* ResizeImage( ::uint32_t* data, int w, int h, int scale );
@@ -82,6 +83,7 @@ struct UI {
 
     virtual void Initialize() {}
     virtual void Draw() {}
+    virtual void Clear() {}
 };
 
 struct Font {

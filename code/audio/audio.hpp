@@ -2,7 +2,6 @@
 #include "../ui/ui.hpp"
 
 #include <miniaudio.h>
-
 #include <mmdeviceapi.h>
 
 extern "C" {
@@ -22,7 +21,6 @@ struct Play {
     ::std::wstring Encoding;
     ::uint16_t Duration;
     ::uint32_t Cover[ ::MIDPOINT * ::MIDPOINT ];
-    ::HANDLE File;
     double Timebase;
     int Samplerate;
     int Bitrate;
@@ -134,11 +132,7 @@ inline ::ma_device Device;
 
 inline ::std::atomic< bool > PauseAudio = true;
 
-inline ::std::mutex PlayerMutex;
-
 inline void Remove( ::uint32_t id ) {
-    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
-
     if ( ::Saved::Songs.contains( id ) )
         ::Saved::Songs.erase( id );
 
@@ -163,7 +157,6 @@ inline void Clean( ::Play& Play ) {
     if ( Play.Codec ) ::avcodec_free_context( &Play.Codec );
     if ( Play.Packet ) ::av_packet_free( &Play.Packet );
     if ( Play.Frame ) ::av_frame_free( &Play.Frame );
-    if ( Play.File ) ::CloseHandle( Play.File );
     if ( Play.SWR ) ::swr_free( &Play.SWR );
 }
 
@@ -177,7 +170,7 @@ extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecou
 extern void SetVolume( double v = 0.0 );
 extern void ArchiveSong( ::std::wstring path );
 extern void SetSong( ::uint32_t song );
-extern ::HRESULT FFMPEG( ::Play& Playing );
+extern ::HRESULT FFMPEG( const wchar_t* path, ::Play& play );
 extern ::HRESULT SetDefaultDevice();
 
 namespace queue {

@@ -3,7 +3,8 @@
 #include <regex>
 
 void SetSong( ::uint32_t song ) {
-    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
+    bool before = ::PauseAudio;
+    ::PauseAudio = true;
 
     if ( !::Saved::Songs.contains( song ) )
         return::Remove( song );
@@ -11,9 +12,8 @@ void SetSong( ::uint32_t song ) {
     ::Clean( ::Playing );
 
     auto& s = ::Saved::Songs[ song ];
-    ::Playing.File = ::CreateFileW( s.Path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 
-    if ( FAILED( ::FFMPEG( ::Playing ) ) ) {
+    if ( FAILED( ::FFMPEG( s.Path, ::Playing ) ) ) {
         ::Clean( ::Playing );
         ::Remove( song );
         return;
@@ -26,6 +26,8 @@ void SetSong( ::uint32_t song ) {
     ::cursor = 0;
 
     ::DisplayOffset = ::Index( ::display, s.ID );
+
+    ::PauseAudio = before;
 }
 
 ::std::wstring NormalizeString( const char str[] ) {
@@ -39,14 +41,11 @@ void SetSong( ::uint32_t song ) {
         else if ( invalid.find( str[ i ] ) == ::std::string::npos )
             ret += ::std::toupper( str[ i ] );
 
-    ret = ::std::regex_replace( ret, ::std::regex( "^ +| +$|( ) +" ), "$1" );
-
-    return ::String::Utf8Wide( ret );
+    return ::String::Utf8Wide( ::std::regex_replace( ret, ::std::regex( "^ +| +$|( ) +" ), "$1" ) );
 }
 
 void ArchiveSong( ::std::wstring p ) {
     static ::Play SecondPlay;
-    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
 
     ::Path( p );
 
@@ -59,18 +58,20 @@ void ArchiveSong( ::std::wstring p ) {
 
     ::media media = {};
 
-    SecondPlay.File = ::CreateFileW( p.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
-    if ( !SecondPlay.File )
+    ::HANDLE file = ::CreateFileW( p.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+    if ( file == INVALID_HANDLE_VALUE )
         return::Clean( SecondPlay );
 
     ::FILETIME time;
-    ::GetFileTime( SecondPlay.File, &time, nullptr, nullptr );
+    ::GetFileTime( file, &time, nullptr, nullptr );
+    ::CloseHandle( file );
+
     ::ULARGE_INTEGER ul;
     ul.LowPart = time.dwLowDateTime;
     ul.HighPart = time.dwHighDateTime;
     media.Write = ul.QuadPart / 10000;
 
-    if ( FAILED( ::FFMPEG( SecondPlay ) ) )
+    if ( FAILED( ::FFMPEG( p.c_str(), SecondPlay ) ) )
         return::Clean( SecondPlay );
 
     media.Artist[ 0 ] = L'_';
@@ -89,7 +90,19 @@ void ArchiveSong( ::std::wstring p ) {
 
     ::wcsncpy_s( media.Encoding, _countof( media.Encoding ), SecondPlay.Encoding.c_str(), _TRUNCATE );
 
+    media.Samplerate = SecondPlay.Samplerate;
+    media.Duration = SecondPlay.Duration;
+    media.Bitrate = SecondPlay.Bitrate;
+
+    ::uint32_t* mini = ::ResizeImage( SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
+    if ( mini )
+        ::std::memcpy( media.Minicover, mini, sizeof( media.Minicover ) );
+    ::delete[] mini;
+
+    ::Clean( SecondPlay );
+
     ::std::wstring dir = ::String::WConcat( SongPath, media.Artist, L"/", media.Album, L"/" );
+    ::Path( dir );
 
     if ( !::std::filesystem::is_directory( dir ) )
         ::std::filesystem::create_directories( dir );
@@ -105,22 +118,12 @@ void ArchiveSong( ::std::wstring p ) {
     if ( p != expected )
         ::std::filesystem::rename( p, expected );
 
-    media.Samplerate = SecondPlay.Samplerate;
-    media.Duration = SecondPlay.Duration;
-    media.Bitrate = SecondPlay.Bitrate;
     media.Size = ::std::filesystem::file_size( expected ) / 1e6;
     media.ID = ::String::Hash( expected );
     ::wcsncpy_s( media.Path, MAX_PATH, expected.c_str(), MAX_PATH - 1 );
 
-    ::uint32_t* mini = ::ResizeImage( SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
-    if ( mini )
-        ::std::memcpy( media.Minicover, mini, sizeof( media.Minicover ) );
-    ::delete[] mini;
-
-    ::Clean( SecondPlay );
-
     if ( ::Saved::Volumes.find( media.ID ) == ::Saved::Volumes.end() )
-        ::Saved::Volumes[ media.ID ] = 0.2;
+        ::Saved::Volumes[ media.ID ] = 0.15;
 
     ::Saved::Songs[ media.ID ] = media;
     ::display.push_back( media.ID );
@@ -131,65 +134,10 @@ void ArchiveSong( ::std::wstring p ) {
     ::Sort();
 }
 
-static int rpacket( void* opaque, ::uint8_t* buf, int bufsize ) {
-    ::DWORD bytes = 0;
+::HRESULT FFMPEG( const wchar_t* path, ::Play& play ) {
+    HR( ::avformat_open_input( &play.Format, ::String::WideUtf8( path ).c_str(), 0, 0 ) );
 
-    if ( !::ReadFile( ( ::HANDLE )opaque, buf, bufsize, &bytes, NULL ) || bytes <= 0 )
-        return AVERROR_EOF;
-
-    return bytes;
-}
-
-::int64_t spacket( void* opaque, ::int64_t offset, int whence ) {
-    ::HANDLE file = ( ::HANDLE )opaque;
-
-    if ( whence == AVSEEK_SIZE ) {
-        ::LARGE_INTEGER size;
-        if ( !::GetFileSizeEx( file, &size ) )
-            return -1;
-        return size.QuadPart;
-    }
-
-    ::DWORD moveMethod;
-    switch ( whence ) {
-        case SEEK_SET: moveMethod = FILE_BEGIN; break;
-        case SEEK_CUR: moveMethod = FILE_CURRENT; break;
-        case SEEK_END: moveMethod = FILE_END; break;
-        default: return -1;
-    }
-
-    ::LARGE_INTEGER in, out;
-    in.QuadPart = offset;
-
-    if ( !::SetFilePointerEx( file, in, &out, moveMethod ) )
-        return -1;
-
-    return out.QuadPart;
-}
-
-::HRESULT FFMPEG( ::Play& play ) {
-    if ( !play.File )
-        return E_FAIL;
-
-    static const int bsize = 4096;
-    unsigned char* buffer = ( unsigned char* )::av_malloc( bsize );
-    if ( !buffer )
-        return E_FAIL;
-
-    ::AVIOContext* avioCtx = ::avio_alloc_context( buffer, bsize, 0, play.File, &::rpacket, nullptr, &::spacket );
-    if ( !avioCtx )
-        return E_FAIL;
-
-    if ( !( play.Format = ::avformat_alloc_context() ) )
-        return E_FAIL;
-
-    play.Format->pb = avioCtx;
-    play.Format->flags |= AVFMT_FLAG_CUSTOM_IO;
-
-    HR( ::avformat_open_input( &play.Format, nullptr, nullptr, nullptr ) );
-
-    if ( !play.Format )
-        return E_FAIL;
+    if ( !play.Format ) return E_FAIL;
 
     HR( ::avformat_find_stream_info( play.Format, 0 ) );
 
@@ -202,73 +150,21 @@ static int rpacket( void* opaque, ::uint8_t* buf, int bufsize ) {
         if ( !stream || !stream->codecpar )
             continue;
 
-        auto id = stream->codecpar->codec_id;
-        if ( id == ::AV_CODEC_ID_MJPEG
-            || id == ::AV_CODEC_ID_PNG
-            || id == ::AV_CODEC_ID_BMP
-            || id == ::AV_CODEC_ID_TARGA
-            || id == ::AV_CODEC_ID_PSD
-            || id == ::AV_CODEC_ID_PICTOR
-            || id == ::AV_CODEC_ID_PAM
-            || id == ::AV_CODEC_ID_PPM
-        ) {
+        ::AVMediaType mt = ::avcodec_get_type( stream->codecpar->codec_id );
+
+        if ( mt == AVMEDIA_TYPE_VIDEO ) {
             ::AVPacket* p = ::av_packet_alloc();
             if ( ::av_read_frame( play.Format, p ) == 0 )
                 if ( p->size > 0 && p->stream_index == i ) {
-                    ::uint32_t* cover = ::ArchiveImage( p->data, p->size, ::MIDPOINT );
-                    if ( cover )
-                        ::std::memcpy( play.Cover, cover, sizeof( play.Cover ) );
-                    ::delete[] cover;
+                    if ( !play.Cover[ 0 ] ) {
+                        ::uint32_t* cover = ::ArchiveImage( p->data, p->size, ::MIDPOINT );
+                        if ( cover )
+                            ::std::memcpy( play.Cover, cover, sizeof( play.Cover ) );
+                        ::delete[] cover;
+                    }
                 }
             ::av_packet_free( &p );
-        }
-
-        if ( id == ::AV_CODEC_ID_FLAC
-            || id == ::AV_CODEC_ID_MP3
-            || id == ::AV_CODEC_ID_AAC
-            || id == ::AV_CODEC_ID_AC3
-            || id == ::AV_CODEC_ID_EAC3
-            || id == ::AV_CODEC_ID_VORBIS
-            || id == ::AV_CODEC_ID_OPUS
-            || id == ::AV_CODEC_ID_WAVPACK
-            || id == ::AV_CODEC_ID_MLP
-            || id == ::AV_CODEC_ID_ALAC
-            || id == ::AV_CODEC_ID_DTS
-            || id == ::AV_CODEC_ID_TRUEHD
-            || id == ::AV_CODEC_ID_SPEEX
-            || id == ::AV_CODEC_ID_CELT
-            || id == ::AV_CODEC_ID_SIREN
-            || id == ::AV_CODEC_ID_TTA
-            || id == ::AV_CODEC_ID_PCM_S16LE
-            || id == ::AV_CODEC_ID_PCM_S16BE
-            || id == ::AV_CODEC_ID_PCM_U16LE
-            || id == ::AV_CODEC_ID_PCM_U16BE
-            || id == ::AV_CODEC_ID_PCM_S8
-            || id == ::AV_CODEC_ID_PCM_U8
-            || id == ::AV_CODEC_ID_PCM_F32LE
-            || id == ::AV_CODEC_ID_PCM_F32BE
-            || id == ::AV_CODEC_ID_PCM_F64LE
-            || id == ::AV_CODEC_ID_PCM_F64BE
-            || id == ::AV_CODEC_ID_GSM
-            || id == ::AV_CODEC_ID_PCM_ALAW
-            || id == ::AV_CODEC_ID_PCM_MULAW
-            || id == ::AV_CODEC_ID_ADPCM_4XM
-            || id == ::AV_CODEC_ID_ADPCM_IMA_QT
-            || id == ::AV_CODEC_ID_ADPCM_MS
-            || id == ::AV_CODEC_ID_ADPCM_SWF
-            || id == ::AV_CODEC_ID_ADPCM_XA
-            || id == ::AV_CODEC_ID_ADPCM_YAMAHA
-            || id == ::AV_CODEC_ID_SIPR
-            || id == ::AV_CODEC_ID_RA_144
-            || id == ::AV_CODEC_ID_SONIC
-            || id == ::AV_CODEC_ID_SONIC_LS
-            || id == ::AV_CODEC_ID_PCM_MULAW
-            || id == ::AV_CODEC_ID_QCELP
-            || id == ::AV_CODEC_ID_WMAV1
-            || id == ::AV_CODEC_ID_WMAV2
-            || id == ::AV_CODEC_ID_WMAVOICE
-            || id == ::AV_CODEC_ID_COOK
-        ) {
+        } else if ( mt == ::AVMEDIA_TYPE_AUDIO ) {
             if ( stream->time_base.den == 0 )
                 continue;
 

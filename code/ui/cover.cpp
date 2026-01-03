@@ -23,10 +23,38 @@
 };
 
 struct Cover : ::UI {
+    ::Rect LastHover;
+    ::uint32_t LastCover;
+    ::std::wstring LastSearch;
+    int LastCursor = -1;
+    ::GridTypes LastGrid = ::GridTypes::Count;
+    ::SortTypes LastSorting = ::SortTypes::Count;
+    ::Playback LastPlayback = ::Playback::Count;
+    double LastVolume;
+
+    void Clear() {
+        LastHover = {};
+        LastCover = 0;
+        LastSearch.clear();
+        LastCursor = -1;
+        LastGrid = ::GridTypes::Count;
+        LastSorting = ::SortTypes::Count;
+        LastPlayback = ::Playback::Count;
+        LastVolume = 0.0;
+    }
+
     virtual ::uint8_t GetPriority() const { return 0; }
 
     void Draw() {
-        ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
+        if ( LastHover == ::Input::hover
+            && LastCover == ::Saved::Playing
+            && LastSearch == ::Searching
+            && ( LastCursor < 0 || LastCursor == ( int )::cursor )
+            && LastGrid == ::GridType
+            && LastSorting == ::Saved::Sorting
+            && LastPlayback == ::Saved::Playback
+            && LastVolume == ::Saved::Volumes[ ::Saved::Playing ]
+        ) return;
 
         ::Rect rect { 0, WINHEIGHT - ::MIDPOINT, ::MIDPOINT };
 
@@ -35,7 +63,7 @@ struct Cover : ::UI {
             .rmb = []() { ::EnumNext( ::Saved::Playback, ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) ); },
             .mmb = []() { ::EnumNext( ::Saved::Sorting, ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) ); ::Sort(); },
             .xmb = []( int d ) { ::queue::next( d ); },
-            .scrl = []( int s ) { ::SetVolume( s * -0.001 ); }
+            .scrl = []( int s ) { ::SetVolume( s * -( 0.001 + 0.009 * ( int )::Input::State[ VK_SHIFT ] ) ); }
         };
 
         bool search = ::GridType == ::GridTypes::Search;
@@ -72,7 +100,9 @@ struct Cover : ::UI {
 
         ::DrawImage( rect, ::Playing.Cover, c );
 
-        if ( rect == ::Input::hover ) {
+        bool active = rect == ::Input::hover;
+
+        if ( active ) {
             ::DefaultDisplay( ::Saved::Playing );
             ::DisplayInformation[ 4 ] = []() { return ::String::WConcat( ( int )::cursor, L" / ", ::Saved::Songs[ ::Saved::Playing ].Duration, L"s" ); };
             ::DisplayInformation[ ARRAYSIZE( DisplayInformation ) - 3 ] = []() { return ::String::WConcat( L"Grid: ", ::GTNames[ ::GridType ] ); };
@@ -89,6 +119,14 @@ struct Cover : ::UI {
                     ::std::wstring info = ::DisplayInformation[ i ]();
                     ::DrawString( 0, WINHEIGHT - ::MIDPOINT + ( FONTHEIGHT + SPACING ) * i, ::MIDPOINT, info );
                 }
+
+        LastHover = ::Input::hover;
+        LastCover = ::Saved::Playing;
+        LastSearch = ::Searching;
+        LastCursor = active ? ::cursor : -1;
+        LastGrid = ::GridType;
+        LastSorting = ::Saved::Sorting;
+        LastPlayback = ::Saved::Playback;
+        LastVolume = ::Saved::Volumes[ ::Saved::Playing ];
     }
-};
-::Cover Cover;
+} Cover;

@@ -2,82 +2,71 @@
 
 #include <fftw3.h>
 
-constexpr int BANDS = WINHEIGHT;
-
-::uint16_t Bands[ ::BANDS ];
+::uint16_t Bands[ WINHEIGHT ];
 
 void Seek( int time ) {
-    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
-
     int framecount = ::Device.sampleRate / 100;
 
-    time = ::std::max( time, 0 );
-    ::cursor = ( framecount / ( double )::Device.sampleRate ) * time * 100.0;
-    ::av_seek_frame( ::Playing.Format, ::Playing.Stream, ( int )( time / ::Playing.Timebase ), AVSEEK_FLAG_BACKWARD );
+    ::cursor = ::std::clamp( time, 0, ( int )::Playing.Duration );
+    ::av_seek_frame( ::Playing.Format, ::Playing.Stream, ( int )( ::cursor / ::Playing.Timebase ), AVSEEK_FLAG_BACKWARD );
     ::avcodec_flush_buffers( ::Playing.Codec );
     ::swr_close( ::Playing.SWR );
     ::swr_init( ::Playing.SWR );
     ::swr_inject_silence( ::Playing.SWR, framecount * 2 );
 }
 
-void Waveform( double* data, ::uint32_t frames ) {
-    static const double width = WINWIDTH - ::MIDPOINT;
-    double v = ::Saved::Volumes[ ::Saved::Playing ];
-    int off = ::cursor * 100.0;
+struct Visualizer : ::UI {
+    ::uint16_t OldBands[ WINHEIGHT ];
 
-    static const double alpha = 0.2;
-    static double smooth[ ::BANDS ];
+    void Clear() { ::std::memset( OldBands, 0, sizeof( OldBands ) ); }
 
-    double amp[ ::BANDS ];
-    double samples = ( double )frames / ::BANDS;
+    void Draw() {
+        if ( !::Bands[ 0 ] && !OldBands[ 0 ] )
+            return;
 
-    for ( int i = 0; i < ::BANDS; ++i ) {
-        int start = ( int )( i * samples );
-        int end = ( int )( ( i + 1 ) * samples );
+        for ( int i = 0; i < WINHEIGHT; i++ ) {
+            int x = SPACING + ::MIDPOINT + ( WINHEIGHT - 1 - i ) * WINWIDTH;
+            int b = ::Bands[ i ];
 
-        double sum = 0.0;
-        for (int j = start; j < end && j < frames; ++j)
-            sum += data[ j ] * data[ j ] * v;
+            if ( OldBands[ i ] > b )
+                ::std::memset( ::Canvas + x + b, 0, ( OldBands[ i ] - b ) * sizeof( ::uint32_t ) );
 
-        amp[ i ] = ::log10( 1.0 + 99.0 * ::pow( ::std::sqrt( sum / ( end - start ) ), 0.5 ) ) / ::log10( 100 );
+            ::std::memcpy(
+                ::Canvas + x,
+                ::Playing.Cover + ::MIDPOINT * ( ::MIDPOINT - 1 - ( i + ::Frame ) % ::MIDPOINT ),
+                b * sizeof( ::uint32_t )
+            );
+
+            OldBands[ i ] = b;
+        }
     }
+} Visualizer;
 
-    double max = 1e-10 + ::std::max( 1e-100, *::std::max_element( amp, amp + ::BANDS ) );
+void Waveform( float* data, ::uint32_t frames ) {
+    static const double width = WINWIDTH - ::MIDPOINT - SPACING;
+    static const double alpha = 0.33;
+    static double smooth[ WINHEIGHT ];
 
-    for ( int i = 0; i < ::BANDS; ++i ) {
-        smooth[ i ] = alpha * amp[ i ] / max + ( 1.0 - alpha ) * smooth[ i ];
+    double samples = ( double )frames / WINHEIGHT;
 
-        int w = ::std::clamp( width * smooth[ i ] * 0.2, 1.0, width );
+    for ( int i = 0; i < WINHEIGHT; i++ ) {
+        int start = i * samples;
+        int end = ( i + 1 ) * samples;
 
-        int change = ::Bands[ i ] - w;
-        if ( change > 0 ) {
-            int x = ::MIDPOINT + ( ::BANDS - 1 - i ) * WINWIDTH + w;
-            ::std::memset( ::Canvas + x, COLORALPHA, change * sizeof( ::uint32_t ) );
-        } else ::std::memcpy(
-            ::Canvas + ::MIDPOINT + ( ::BANDS - 1 - i ) * WINWIDTH,
-            ::Canvas + WINWIDTH * ( WINHEIGHT - ::MIDPOINT ) + WINWIDTH * ( ::MIDPOINT - 1 - ( i + off ) % ::MIDPOINT ),
-            w * sizeof( ::uint32_t )
-        );
+        double peak = 0.0;
+        for ( int j = start; j < end && j < frames; ++j )
+            peak = ::std::max( peak, 0.5 * ::std::abs( data[ j * 2 ] + data[ j * 2 + 1 ] ) );
 
-        ::Bands[ i ] = w;
+        smooth[ i ] = alpha * peak + ( 1 - alpha ) * smooth[ i ];
+
+        ::Bands[ i ] = ::std::clamp( width * 0.33 * smooth[ i ], 1.0, width );
     }
-}
-
-void ClearBars() {
-    if ( ::Bands[ 0 ] > 0 )
-        for ( int i = 0; i < ::BANDS; i++ )
-            if ( !::PauseDraw )
-                for ( int x = 0; x < ::Bands[ i ]; x++ )
-                    ::SetPixel( ::MIDPOINT + x, ( ::BANDS - 1 - i ), COLORALPHA );
-    
-    ::memset( ::Bands, 0, sizeof( ::Bands ) );
 }
 
 void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
-    ::std::lock_guard< ::std::mutex > lock( ::PlayerMutex );
-
     if ( ::PauseAudio || !::Playing.SWR ) {
-        ::ClearBars();
+        if ( ::Bands[ 0 ] )
+            ::memset( ::Bands, 0, sizeof( ::Bands ) );
         return;
     }
 
@@ -112,16 +101,12 @@ void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount ) {
             break;
     }
 
-    static int lastsecond;
     ::cursor += framecount / ( double )device->sampleRate;
 
-    if ( ::PauseDraw )
-        ::ClearBars();
-    else {
-        ::Waveform( ( double* )output, framecount );
-
-        lastsecond = ( int )::cursor;
-    }
+    if ( !::PauseDraw )
+        ::Waveform( ( float* )output, framecount );
+    else if ( ::Bands[ 0 ] )
+        ::memset( ::Bands, 0, sizeof( ::Bands ) );
 
     if ( ( int )::cursor > ::Playing.Duration )
         ::Message( WM_QUEUENEXT, 0, 0 );

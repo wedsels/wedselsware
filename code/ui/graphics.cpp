@@ -26,9 +26,6 @@
 ::ID3D11RenderTargetView* RenderView = nullptr;
 ::ID3D11ShaderResourceView* ResourceView = nullptr;
 
-::D3D11_MAPPED_SUBRESOURCE Mapped;
-::uint32_t* MappedData = nullptr;
-
 struct Vertex {
     float pos[ 2 ];
     float uv[ 2 ];
@@ -92,9 +89,9 @@ const char* g_psCode = R"(
     desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     desc.BufferCount = 2;
     desc.Scaling = ::DXGI_SCALING_STRETCH;
-    desc.SwapEffect = ::DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    desc.SwapEffect = ::DXGI_SWAP_EFFECT_FLIP_DISCARD;
     desc.AlphaMode = ::DXGI_ALPHA_MODE_PREMULTIPLIED;
-    desc.Flags = 0;
+    desc.Flags = ::DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     HR( factory->CreateSwapChainForComposition( ::Device, &desc, nullptr, &::SwapChain ) );
     factory->Release();
@@ -219,21 +216,20 @@ const char* g_psCode = R"(
 
     HR( ::DCDevice->Commit() );
 
-    HR( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &::Mapped ) );
+    ::D3D11_MAPPED_SUBRESOURCE Mapped;
+    HR( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &Mapped ) );
 
-    if ( !( ::MappedData = ( ::uint32_t* )::Mapped.pData ) )
+    if ( !( ::Canvas = ( ::uint32_t* )Mapped.pData ) )
         return E_FAIL;
 
     return S_OK;
 }
 
 void RenderFrame() {
-    ::std::memcpy( ::MappedData, ::Canvas, sizeof( ::Canvas ) );
-
     ::Context->OMSetRenderTargets( 1, &::RenderView, nullptr );
     ::Context->Draw( 6, 0 );
 
-    ::SwapChain->Present( 1, 0 );
+    ::SwapChain->Present( 0, DXGI_PRESENT_ALLOW_TEARING );
 }
 
 ::HRESULT InitGraphics() {
@@ -244,18 +240,22 @@ void RenderFrame() {
     HR( ::InitFrame() );
 
     THREAD(
-        const auto period = ::std::chrono::duration_cast< ::std::chrono::steady_clock::duration >( ::std::chrono::duration< double >( 1.0 / 100.0 ) );
+        const auto period = ::std::chrono::duration_cast< ::std::chrono::steady_clock::duration >( ::std::chrono::duration< double >( 1.0 / 175.0 ) );
         ::std::chrono::time_point next = ::std::chrono::steady_clock::now();
 
-        ::std::unique_lock< ::std::mutex > lock( ::CanvasMutex );
+        ::std::shared_lock< ::std::shared_mutex > lock( ::CanvasMutex );
 
         while ( true ) {
             ::std::this_thread::sleep_until( next += period );
 
             if ( ::PauseDraw ) {
-                if ( ::Canvas[ 0 ] ) {
+                if ( !::Input::clicks.empty() ) {
+                    ::std::memset( ::Canvas, 0, ::CanvasSize );
+
+                    for ( ::UI* i : ::UI::Registry() )
+                        i->Clear();
+
                     ::Input::clicks.clear();
-                    ::std::memset( ::Canvas, 0, sizeof( ::Canvas ) );
                     ::RenderFrame();
                 }
             } else {
@@ -264,6 +264,8 @@ void RenderFrame() {
 
                 ::RenderFrame();
             }
+
+            ::Frame++;
         }
     );
 
