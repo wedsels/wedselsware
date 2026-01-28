@@ -266,7 +266,7 @@ struct GridUI : ::UI {
             int loc = i + Offset;
             ::Rect rect { b.l + ( MINICOVER ) * ( i % columns ), b.t + ( MINICOVER ) * ( i / columns ), MINICOVER };
 
-            if ( loc >= GetDisplay().size() )
+            if ( loc >= LastSize )
                 ::DrawBox( rect, COLORALPHA );
             else {
                 ::DrawImage( rect, GetImage( GetDisplay()[ loc ] ) );

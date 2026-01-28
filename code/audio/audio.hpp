@@ -117,8 +117,8 @@ inline void Sort() {
         case ::SortTypes::Artist:
                 ::std::sort( ::SongDisplay.begin(), ::SongDisplay.end(), []( ::uint32_t a, ::uint32_t b ) {
                     int cmp;
-                    
-                    cmp = ::wcscmp( ::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist );
+     
+               cmp = ::wcscmp( ::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist );
                     if ( cmp != 0 ) return cmp < 0;
 
                     cmp = ::wcscmp( ::Saved::Songs[ a ].Album, ::Saved::Songs[ b ].Album );
@@ -130,8 +130,8 @@ inline void Sort() {
         case ::SortTypes::Title:
                 ::std::sort( ::SongDisplay.begin(), ::SongDisplay.end(), []( ::uint32_t a, ::uint32_t b ) {
                     int cmp;
-                    
-                    cmp = ::wcscmp( ::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title );
+     
+               cmp = ::wcscmp( ::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title );
                     if ( cmp != 0 ) return cmp < 0;
 
                     cmp = ::wcscmp( ::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist );
@@ -182,7 +182,7 @@ extern void SetMixerVolume( ::uint32_t entry, double change );
 
 extern void Seek( int time );
 extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount );
-extern void ArchiveSong( ::std::wstring path );
+extern void ArchiveSong( ::std::wstring& path );
 extern void SetSong( ::uint32_t song );
 extern ::HRESULT FFMPEG( const wchar_t* path, ::Play& play );
 extern ::HRESULT SetDefaultDevice();

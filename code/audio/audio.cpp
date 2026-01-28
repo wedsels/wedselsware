@@ -37,7 +37,7 @@ void SetSong( ::uint32_t song ) {
     return ::String::Utf8Wide( ::std::regex_replace( ret, ::std::regex( "^ +| +$|( ) +" ), "$1" ) );
 }
 
-void ArchiveSong( ::std::wstring p ) {
+void ArchiveSong( ::std::wstring& p ) {
     static ::Play SecondPlay;
 
     ::Path( p );

@@ -29,7 +29,7 @@ struct Queues : ::GridUI {
             ::Queue().insert( ::Queue().begin() + nindex, v );
 
             Redraw();
-        
+
             Index = nindex;
             Moved = true;
         }

@@ -40,7 +40,7 @@ inline ::HWND hwnd;
 inline ::HWND desktophwnd;
 inline ::HWND consolehwnd;
 
-extern ::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
+extern ::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( ::std::wstring& ) > add, ::std::function< void( ::std::wstring& ) > remove );
 extern ::HRESULT InitGraphics();
 extern ::HRESULT InitDevice();
 extern ::HRESULT InitInput();

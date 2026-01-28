@@ -1,8 +1,8 @@
 #include "audio/audio.hpp"
 
 struct Directory {
-    ::std::function< void( const wchar_t* ) > add;
-    ::std::function< void( ::uint32_t ) > remove;
+    ::std::function< void( ::std::wstring& ) > add;
+    ::std::function< void( ::std::wstring& ) > remove;
     mutable ::std::vector< ::std::wstring > fileremove;
     mutable ::std::vector< ::std::wstring > fileadd;
 };
@@ -43,15 +43,7 @@ void UpdateDirectories() {
         ::Directory& d = dir.second;
 
         while ( !d.fileremove.empty() && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
-            ::std::wstring& p = d.fileremove.back();
-            ::uint32_t hash = ::String::Hash( p );
-// MAKE THIS FOR ALL DIRECTORIES
-            if ( ::Saved::Songs.contains( hash ) )
-                d.remove( hash );
-            else
-                for ( auto& i : ::Saved::Songs | ::std::views::reverse )
-                    if ( ::wcsstr( i.second.Path, p.c_str() ) )
-                        d.remove( i.first );
+            d.remove( d.fileremove.back() );
 
             d.fileremove.pop_back();
         }
@@ -60,7 +52,7 @@ void UpdateDirectories() {
         while ( !status && !d.fileadd.empty() && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
             for ( auto& i : ::IterateDirectory( msg, d.fileadd.back() ) )
                 if ( ::FileReady( i.c_str() ) )
-                    d.add( i.c_str() );
+                    d.add( i );
                 else status = true;
 
             if ( status )
@@ -150,7 +142,7 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
     map.erase( id );
 }
 
-::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
+::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( ::std::wstring& ) > add, ::std::function< void( ::std::wstring& ) > remove ) {
     ::Directory dir = { add, remove, {} };
 
     for ( auto& i : ::std::filesystem::directory_iterator( path, ::std::filesystem::directory_options::skip_permission_denied ) )

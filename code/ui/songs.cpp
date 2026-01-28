@@ -13,6 +13,8 @@ struct Songs : ::GridUI {
 
     void GridEnter( ::uint32_t item ) { ::SongInfo( item ); }
 
+    // bool GridBlockDraw() { ::std::cout<<GetDisplay().size()<<'\n'; return true; }
+
     void GridClick( ::uint32_t item ) {
         ::media& s = ::Saved::Songs[ item ];
 

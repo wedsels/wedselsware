@@ -87,21 +87,21 @@ void Load() {
         return TRUE;
     }
 
-    ::UpdateDirectories();
-
     switch ( msg ) {
         case WM_NCHITTEST:
             return HTTRANSPARENT;
         case WM_QUEUENEXT:
                 ::queue::next( 1 );
-            return NULL;
+            break;
         case WM_FUNCTION: {
                 ::std::function< void() >* f = ( ::std::function< void() >* )( lParam );
                 if ( f ) ( *f )();
-            } return NULL;
-        default:
-            return ::DefWindowProcA( hwnd, msg, wParam, lParam );
+            } break;
     }
+
+    ::UpdateDirectories();
+
+    return ::DefWindowProcA( hwnd, msg, wParam, lParam );
 }
 
 ::HWND Window( ::HINSTANCE hInstance ) {
@@ -128,6 +128,17 @@ void Load() {
     ::ShowWindow( hwnd, SW_SHOW );
 
     return hwnd;
+}
+
+void RemoveSong( ::std::wstring& p ) {
+    ::uint32_t hash = ::String::Hash( p );
+
+    if ( ::Saved::Songs.contains( hash ) )
+        ::Remove( hash );
+    else
+        for ( auto& i : ::Saved::Songs | ::std::views::reverse )
+            if ( ::wcsstr( i.second.Path, p.c_str() ) )
+                ::Remove( i.first );
 }
 
 void SyncDirectory( const ::std::wstring& source, const ::std::wstring& destination ) {
@@ -163,16 +174,16 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::std::ofstream log( "log", ::std::ios::out );
     ::std::cerr.rdbuf( log.rdbuf() );
 
-    ::Load();   
+    ::Load();
 
     ::hwnd = ::Window( hInstance );
     ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
 
     HER( ::CoInitialize( NULL ) );
 
-    HER( ::InitDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Apps, ::Saved::AppsPath ); } ) );
-    HER( ::InitDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Webs, ::Saved::WebsPath ); } ) );
-    HER( ::InitDirectory( ::SongPath.c_str(), ::ArchiveSong, ::Remove ) );
+    HER( ::InitDirectory( L"E:/Apps/", []( ::std::wstring& p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::std::wstring& p ) { ::DeleteLink( ::String::Hash( p ), ::Saved::Apps, ::Saved::AppsPath ); } ) );
+    HER( ::InitDirectory( L"E:/Webs/", []( ::std::wstring& p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::std::wstring& p ) { ::DeleteLink( ::String::Hash( p ), ::Saved::Webs, ::Saved::WebsPath ); } ) );
+    HER( ::InitDirectory( ::SongPath.c_str(), ::ArchiveSong, ::RemoveSong ) );
 
     HER( ::InitFont() );
     HER( ::InitGraphics() );
