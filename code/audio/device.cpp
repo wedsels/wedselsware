@@ -15,11 +15,6 @@ void CleanDevice() {
     ::ma_context_uninit( &::Context );
 }
 
-void SetVolume( double v ) {
-    ::Saved::Volumes[ ::Saved::Playing ] = ::std::clamp( ::Saved::Volumes[ ::Saved::Playing ] + v, 0.0, 1.0 );
-    ::ma_device_set_master_volume( &::Device, ( float )::Saved::Volumes[ ::Saved::Playing ] );
-}
-
 ::HRESULT SetDefaultDevice() {
     ::PauseAudio = true;
 
@@ -50,7 +45,7 @@ void SetVolume( double v ) {
 
     ::Config = ::ma_device_config_init( ::ma_device_type_playback );
     ::Config.dataCallback = []( ::ma_device* device, void* output, const void* input, ::ma_uint32 framecount ) { ::Decode( device, ( ::uint8_t* )output, framecount ); };
-    ::Config.stopCallback = []( ::ma_device* device ){ ::Message( WM_DEVICE, 0, 0 ); };
+    ::Config.stopCallback = []( ::ma_device* device ){ FUNCTION( ::SetDefaultDevice ); };
     ::Config.playback.format = ma_format_f32;
     ::Config.periodSizeInFrames = 0;
     ::Config.sampleRate = 0;

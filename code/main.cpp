@@ -26,6 +26,7 @@ void Save() {
     SERIALIZE( Sorting );
     SERIALIZE( Playback );
     SERIALIZE( Queue );
+    SERIALIZE( Queues );
     SERIALIZE( Volumes );
     SERIALIZE( Mixers );
     SERIALIZE( Songs );
@@ -46,16 +47,22 @@ void Load() {
     DESERIALIZE( Sorting );
     DESERIALIZE( Playback );
     DESERIALIZE( Queue );
+    DESERIALIZE( Queues );
     DESERIALIZE( Volumes );
     DESERIALIZE( Mixers );
     DESERIALIZE( Songs );
 
     for ( auto& i : ::Saved::Songs | ::std::views::reverse )
         if ( ::std::filesystem::exists( i.second.Path ) )
-            ::display.push_back( i.first );
+            ::SongDisplay.push_back( i.first );
         else
             ::Remove( i.first );
     ::Sort();
+
+    if ( ::Saved::Queues.empty() || ::Saved::Queue >= ::Saved::Queues.size() ) {
+        ::Saved::Queue = 0;
+        ::Saved::Queues = { { ::Saved::Playing } };
+    }
 
     ::Loaded = true;
 }
@@ -80,27 +87,18 @@ void Load() {
         return TRUE;
     }
 
+    ::UpdateDirectories();
+
     switch ( msg ) {
         case WM_NCHITTEST:
             return HTTRANSPARENT;
-        case WM_MOUSE:
-                ::Mouse( wParam, lParam );
-            return NULL;
-        case WM_KEYBOARD:
-                ::Keyboard( wParam, lParam );
-            return NULL;
         case WM_QUEUENEXT:
                 ::queue::next( 1 );
             return NULL;
-        case WM_MIXER:
-                ::SetMixers();
-            return NULL;
-        case WM_ACTION:
-                ( *( ::std::function< void() >* )( wParam ) )();
-            return NULL;
-        case WM_DEVICE:
-                ::SetDefaultDevice();
-            return NULL;
+        case WM_FUNCTION: {
+                ::std::function< void() >* f = ( ::std::function< void() >* )( lParam );
+                if ( f ) ( *f )();
+            } return NULL;
         default:
             return ::DefWindowProcA( hwnd, msg, wParam, lParam );
     }
@@ -132,52 +130,57 @@ void Load() {
     return hwnd;
 }
 
-void CALLBACK OnTop( ::HWINEVENTHOOK, ::DWORD event, ::HWND hwnd, ::LONG idObject, ::LONG, ::DWORD, ::DWORD ) {
-    if ( event != EVENT_SYSTEM_FOREGROUND || idObject != OBJID_WINDOW || hwnd == nullptr )
-        return;
+void SyncDirectory( const ::std::wstring& source, const ::std::wstring& destination ) {
+    ::std::filesystem::copy(
+        source,
+        destination,
+        ::std::filesystem::copy_options::recursive | ::std::filesystem::copy_options::skip_existing
+    );
 
-    ::SetWindowPos( ::hwnd, HWND_TOPMOST, WINLEFT, WINTOP, WINWIDTH, WINHEIGHT, SWP_NOACTIVATE );
+    for ( const ::std::filesystem::path& entry : ::std::filesystem::recursive_directory_iterator( L"E:/Sounds" ) )
+        if ( !::std::filesystem::exists( source / ::std::filesystem::relative( entry, destination ) ) )
+            ::std::filesystem::remove_all( entry );
 }
 
 int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
     ::SetUnhandledExceptionFilter( ::Crash );
     ::SetConsoleCtrlHandler( ::CtrlHandler, TRUE );
     ::std::atexit( ::Save );
+    ::std::set_terminate( ::Save );
 
     ::signal( SIGINT, []( int ) { ::Save(); } );
     ::signal( SIGTERM, []( int ) { ::Save(); } );
     ::signal( SIGSEGV, []( int ) { ::Save(); } );
     ::signal( SIGABRT, []( int ) { ::Save(); } );
 
-    ::SetWinEventHook( EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr, ::OnTop, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS );
-
     ::AllocConsole();
-    ::consolehwnd = ::GetConsoleWindow();
-    ::ShowWindow( consolehwnd, SW_HIDE );
+    ::ShowWindow( ::consolehwnd = ::GetConsoleWindow(), SW_HIDE );
     ::FILE* fp;
     ::freopen_s( &fp, "CONOUT$", "w", stdout );
     ::freopen_s( &fp, "CONOUT$", "w", stderr );
     ::freopen_s( &fp, "CONIN$", "r", stdin );
 
-    ::Load();
+    ::std::ofstream log( "log", ::std::ios::out );
+    ::std::cerr.rdbuf( log.rdbuf() );
+
+    ::Load();   
 
     ::hwnd = ::Window( hInstance );
     ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
 
-    ::std::shared_lock< ::std::shared_mutex > lock( ::CanvasMutex );
-
     HER( ::CoInitialize( NULL ) );
 
-    HER( ::InitializeDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Apps, ::Saved::AppsPath ); } ) );
-    HER( ::InitializeDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Webs, ::Saved::WebsPath ); } ) );
-    HER( ::InitializeDirectory( SongPath.c_str(), ::ArchiveSong, ::Remove ) );
+    HER( ::InitDirectory( L"E:/Apps/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Apps, ::Saved::AppsPath ); } ) );
+    HER( ::InitDirectory( L"E:/Webs/", []( ::std::wstring p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::uint32_t id ) { ::DeleteLink( id, ::Saved::Webs, ::Saved::WebsPath ); } ) );
+    HER( ::InitDirectory( ::SongPath.c_str(), ::ArchiveSong, ::Remove ) );
 
-    HER( ::InitializeFont() );
+    HER( ::InitFont() );
     HER( ::InitGraphics() );
     HER( ::InitDevice() );
     HER( ::InitInput() );
-    HER( ::InitDraw() );
-    HER( ::InitializeMixer() );
+    HER( ::InitMixer() );
+
+    ::SyncDirectory( ::SongPath, L"E:/Sounds" );
 
     ::MSG msg = { 0 };
     while ( ::GetMessageW( &msg, NULL, 0, 0 ) ) {
@@ -186,8 +189,6 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
         ::TranslateMessage( &msg );
         ::DispatchMessageW( &msg );
-
-        ::UpdateDirectories( msg );
     }
 
     ::Save();

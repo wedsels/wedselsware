@@ -12,6 +12,10 @@ extern "C" {
 
 inline constexpr int MINIPATH = MAX_PATH / 3;
 
+inline ::std::mutex SeekMutex;
+
+inline ::relaxed_atomic< ::uint16_t > Wave[ WINWIDTH / 2 ];
+
 struct Play {
     ::AVFormatContext* Format;
     ::AVCodecContext* Codec;
@@ -20,8 +24,8 @@ struct Play {
     ::AVFrame* Frame;
     ::std::wstring Encoding;
     ::uint16_t Duration;
-    ::uint32_t Cover[ ::MIDPOINT * ::MIDPOINT ];
-    double Timebase;
+    ::uint32_t Cover[ MIDPOINT * MIDPOINT ];
+    ::AVRational Timebase;
     int Samplerate;
     int Bitrate;
     int Stream = -1;
@@ -55,7 +59,7 @@ struct Launch {
 
 extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
 extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
-extern void UpdateDirectories( ::MSG& msg );
+extern void UpdateDirectories();
 
 struct Volume {
     wchar_t name[ ::MINIPATH ];
@@ -73,30 +77,45 @@ namespace Saved {
     inline ::uint32_t Playing;
     inline ::SortTypes Sorting;
     inline ::Playback Playback;
-    inline ::std::vector< ::uint32_t > Queue;
+    inline ::uint8_t Queue;
+    inline ::std::vector< ::std::vector< ::uint32_t > > Queues;
     inline ::std::unordered_map< ::uint32_t, double > Volumes;
     inline ::std::unordered_map< ::uint32_t, double > Mixers;
     inline ::std::unordered_map< ::uint32_t, ::media > Songs;
 };
 
-inline ::std::vector< ::uint32_t > display {};
+inline ::std::vector< ::uint32_t >& Queue() { return ::Saved::Queues[ ::Saved::Queue ]; }
+
+inline ::std::vector< ::uint32_t > SongDisplay {};
 
 static const ::std::wstring SongPath = L"F:/SoundStuff/Sounds/";
 
-inline void Sort() {
-    if ( ::GridType == ::GridTypes::Queue )
+inline void SongInfo( ::uint32_t song ) {
+    ::DisplayText.clear();
+
+    if ( !::Saved::Songs.contains( song ) )
         return;
 
-    ::std::vector< ::uint32_t >& Display = ::GetDisplay();
+    ::DisplayText.push_back( ::Saved::Songs[ song ].Title );
+    ::DisplayText.push_back( ::Saved::Songs[ song ].Artist );
+    ::DisplayText.push_back( ::Saved::Songs[ song ].Album );
+    ::DisplayText.push_back( ::Saved::Songs[ song ].Encoding );
+    ::DisplayText.push_back( ::String::WConcat( ::Saved::Songs[ song ].Duration, L"s" ) );
+    ::DisplayText.push_back( ::String::WConcat( ::Saved::Songs[ song ].Size, L"mb" ) );
+    ::DisplayText.push_back( ::String::WConcat( ::Saved::Songs[ song ].Bitrate, L"kbps" ) );
+    ::DisplayText.push_back( ::String::WConcat( ::Saved::Songs[ song ].Samplerate, L"Hz" ) );
+    ::DisplayText.push_back( ::String::WConcat( ::Saved::Volumes[ song ], L"%" ) );
+}
 
+inline void Sort() {
     switch ( ::Saved::Sorting ) {
         case ::SortTypes::Time:
-                ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
+                ::std::sort( ::SongDisplay.begin(), ::SongDisplay.end(), []( ::uint32_t a, ::uint32_t b ) {
                     return ::Saved::Songs[ a ].Write < ::Saved::Songs[ b ].Write;
                 } );
             break;
         case ::SortTypes::Artist:
-                ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
+                ::std::sort( ::SongDisplay.begin(), ::SongDisplay.end(), []( ::uint32_t a, ::uint32_t b ) {
                     int cmp;
                     
                     cmp = ::wcscmp( ::Saved::Songs[ a ].Artist, ::Saved::Songs[ b ].Artist );
@@ -109,7 +128,7 @@ inline void Sort() {
                 } );
             break;
         case ::SortTypes::Title:
-                ::std::sort( Display.begin(), Display.end(), []( ::uint32_t a, ::uint32_t b ) {
+                ::std::sort( ::SongDisplay.begin(), ::SongDisplay.end(), []( ::uint32_t a, ::uint32_t b ) {
                     int cmp;
                     
                     cmp = ::wcscmp( ::Saved::Songs[ a ].Title, ::Saved::Songs[ b ].Title );
@@ -123,32 +142,28 @@ inline void Sort() {
             break;
         default: break;
     }
-
-    ::DisplayOffset = ::Index( Display, ::Saved::Playing );
 }
 
 inline double cursor;
 inline ::ma_device Device;
 
-inline ::std::atomic< bool > PauseAudio = true;
+inline ::relaxed_atomic< bool > PauseAudio = true;
 
 inline void Remove( ::uint32_t id ) {
+    ::std::lock_guard< ::std::mutex > lock( ::CanvasMutex );
+
     if ( ::Saved::Songs.contains( id ) )
         ::Saved::Songs.erase( id );
 
     int index;
 
-    index = ::Index( ::display, id );
+    index = ::Index( ::SongDisplay, id );
     if ( index > -1 )
-        ::display.erase( ::display.begin() + index );
+        ::SongDisplay.erase( ::SongDisplay.begin() + index );
 
-    index = ::Index( ::Saved::Queue, id );
+    index = ::Index( ::Queue(), id );
     if ( index > -1 )
-        ::Saved::Queue.erase( ::Saved::Queue.begin() + index );
-
-    index = ::Index( ::Search, id );
-    if ( index > -1 )
-        ::Saved::Queue.erase( ::Saved::Queue.begin() + index );
+        ::Queue().erase( ::Queue().begin() + index );
 }
 
 inline void Clean( ::Play& Play ) {
@@ -167,7 +182,6 @@ extern void SetMixerVolume( ::uint32_t entry, double change );
 
 extern void Seek( int time );
 extern void Decode( ::ma_device* device, ::uint8_t* output, ::ma_uint32 framecount );
-extern void SetVolume( double v = 0.0 );
 extern void ArchiveSong( ::std::wstring path );
 extern void SetSong( ::uint32_t song );
 extern ::HRESULT FFMPEG( const wchar_t* path, ::Play& play );
@@ -175,12 +189,12 @@ extern ::HRESULT SetDefaultDevice();
 
 namespace queue {
     static inline void clear() {
-        ::Saved::Queue.clear();
-        ::Saved::Queue.push_back( ::Saved::Playing );
+        ::Queue().clear();
+        ::Queue().push_back( ::Saved::Playing );
     }
 
-    static inline bool begin() { return ::Saved::Queue.empty() || ::Saved::Queue.front() == ::Saved::Playing; }
-    static inline bool end() { return ::Saved::Queue.empty() || ::Saved::Queue.back() == ::Saved::Playing; }
+    static inline bool begin() { return ::Queue().empty() || ::Queue().front() == ::Saved::Playing; }
+    static inline bool end() { return ::Queue().empty() || ::Queue().back() == ::Saved::Playing; }
     static inline bool road( int direction ) { return direction > 0 && end() || direction < 0 && begin(); }
 
     static inline ::uint32_t next( ::std::vector< ::uint32_t >& line, int direction, ::uint32_t fallback = ::Saved::Playing ) {
@@ -191,15 +205,15 @@ namespace queue {
     }
 
     static inline void add( ::uint32_t song, int direction ) {
-        int in = ::Index( ::Saved::Queue, song );
+        int in = ::Index( ::Queue(), song );
 
         if ( in > -1 )
-            ::Saved::Queue.erase( ::Saved::Queue.begin() + in );
+            ::Queue().erase( ::Queue().begin() + in );
 
         if ( direction > 0 )
-            ::Saved::Queue.push_back( song );
+            ::Queue().push_back( song );
         else
-            ::Saved::Queue.emplace( ::Saved::Queue.begin(), song );
+            ::Queue().emplace( ::Queue().begin(), song );
     }
 
     static inline void set( ::uint32_t song, int direction ) {
@@ -210,10 +224,10 @@ namespace queue {
     }
 
     static inline ::std::unordered_map< ::Playback, ::std::function< void( int ) > > playbacks = {
-        { ::Playback::Linear, []( int direction ) { { set( next( ::Saved::Queue, direction, next( ::display, direction ) ), direction ); } } },
-        { ::Playback::Repeat, []( int direction ) { { set( ::Saved::Playing, 0 ); } } },
-        { ::Playback::Shuffle, []( int direction ) { { set( next( ::Saved::Queue, direction, ::display[ ::RNG() % ::display.size() ] ), direction ); } } },
-        { ::Playback::Queue, []( int direction ) { { set( next( ::Saved::Queue, direction, direction > 0 ? ::Saved::Queue.front() : ::Saved::Queue.back() ), 0 ); } } },
+        { ::Playback::Linear, []( int direction ) { { set( next( ::Queue(), direction, next( ::SongDisplay, direction ) ), direction ); } } },
+        { ::Playback::Repeat, []( int direction ) { { ::Seek( -INT_MAX ); } } },
+        { ::Playback::Shuffle, []( int direction ) { { set( next( ::Queue(), direction, ::SongDisplay[ ::RNG() % ::SongDisplay.size() ] ), direction ); } } },
+        { ::Playback::Queue, []( int direction ) { { set( next( ::Queue(), direction, direction > 0 ? ::Queue().front() : ::Queue().back() ), 0 ); } } },
     };
 
     static inline void next( int direction ) { playbacks[ ::Saved::Playback ]( direction ); }

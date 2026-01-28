@@ -1,10 +1,12 @@
 #include "../audio/audio.hpp"
 
 void SetPixel( int x, int y, ::uint32_t color ) {
-    if ( y * WINWIDTH + x > WINWIDTH * WINHEIGHT )
+    int i = y * WINWIDTH + x;
+
+    if ( i > WINWIDTH * WINHEIGHT )
         return;
 
-    ::Canvas[ y * WINWIDTH + x ] = color;
+    ::Canvas[ i ] = color;
 }
 
 ::uint32_t TimeColor() {
@@ -14,46 +16,47 @@ void SetPixel( int x, int y, ::uint32_t color ) {
     double g = 0.5 + 0.5 * ::std::sin( 2.0 * M_PI * phase + 2.1 );
     double b = 0.5 + 0.5 * ::std::sin( 2.0 * M_PI * phase + 4.2 );
 
-    ::uint8_t R = ( ::uint8_t )( r * 255 );
-    ::uint8_t G = ( ::uint8_t )( g * 255 );
-    ::uint8_t B = ( ::uint8_t )( b * 255 );
+    ::uint8_t R = ( ::uint8_t )( r * 255.0 );
+    ::uint8_t G = ( ::uint8_t )( g * 255.0 );
+    ::uint8_t B = ( ::uint8_t )( b * 255.0 );
 
     return ( B << 24 ) | ( G << 16 ) | ( R << 8 ) | 255;
 }
 
-void DrawBorder( ::Rect r, ::uint32_t b ) {
+void Invert( ::uint32_t& color ) {
+    color = ( color ^ 0x00FFFFFFu ) | 0xFF000000u;
+}
+
+void BorderRect( ::Rect& r ) {
+    if ( r.l < 0 )
+        r.l = 0;
+    if ( r.t < 0 )
+        r.t = 0;
     if ( r.b > WINHEIGHT )
         r.b = WINHEIGHT;
     if ( r.r > WINWIDTH )
         r.r = WINWIDTH;
+}
+
+void DrawBorder( ::Rect& r ) {
+    ::BorderRect( r );
 
     int width = r.r - r.l;
     int height = r.b - r.t;
 
-    ::std::fill_n( ::Canvas + r.t * WINWIDTH + r.l, width, b );
-    ::std::fill_n( ::Canvas + ( r.b - 1 ) * WINWIDTH + r.l, width, b );
+    for ( int x = 0; x < width - 2; x++ ) {
+        ::Invert( ::Canvas[ 1 + r.t * WINWIDTH + r.l + x ] );
+        ::Invert( ::Canvas[ 1 + ( r.b - 1 ) * WINWIDTH + r.l + x ] );
+    }
 
     for ( int y = 0; y < height; y++ ) {
-        ::Canvas[ ( r.t + y ) * WINWIDTH + r.l ] = b;
-        ::Canvas[ ( r.t + y ) * WINWIDTH + r.r - 1 ] = b;
+        ::Invert( ::Canvas[ ( r.t + y ) * WINWIDTH + r.l ] );
+        ::Invert( ::Canvas[ ( r.t + y ) * WINWIDTH + r.r - 1 ] );
     }
 }
 
-void CheckClick( ::Rect r, ::std::optional< ::Input::Click > c ) {
-    if ( c )
-        ::Input::Click::create( r, *c );
-    else
-        ::Input::clicks.erase( r );
-
-    if ( ::Input::hover == r )
-        ::DrawBorder( r, ::TimeColor() );
-}
-
-void DrawBox( ::Rect r, ::uint32_t b, ::std::optional< ::Input::Click > c ) {
-    if ( r.b > WINHEIGHT )
-        r.b = WINHEIGHT;
-    if ( r.r > WINWIDTH )
-        r.r = WINWIDTH;
+void DrawBox( ::Rect& r, ::uint32_t b ) {
+    ::BorderRect( r );
 
     int width = r.r - r.l;
     int height = r.b - r.t;
@@ -64,20 +67,15 @@ void DrawBox( ::Rect r, ::uint32_t b, ::std::optional< ::Input::Click > c ) {
             width,
             b
         );
-
-    ::CheckClick( r, c );
 }
 
-void DrawImage( ::Rect r, ::uint32_t* img, ::std::optional< ::Input::Click > c ) {
-    if ( r.b > WINHEIGHT )
-        r.b = WINHEIGHT;
-    if ( r.r > WINWIDTH )
-        r.r = WINWIDTH;
+void DrawImage( ::Rect& r, ::uint32_t* img ) {
+    ::BorderRect( r );
 
     int width = r.r - r.l;
     int height = r.b - r.t;
 
-    if ( ::EmptyImage( img, width ) )
+    if ( !img || ::EmptyImage( img, width ) )
         ::DrawBox( r, COLORGHOST );
     else for ( int y = 0; y < height; y++ )
         ::std::memcpy(
@@ -85,41 +83,51 @@ void DrawImage( ::Rect r, ::uint32_t* img, ::std::optional< ::Input::Click > c )
             img + y * width,
             width * sizeof( ::uint32_t )
         );
-
-    ::CheckClick( r, c );
 }
 
-void DrawString( int ox, int oy, int width, ::std::wstring& s, ::std::optional< ::Input::Click > c ) {
-    int tw = ::TextWidth( s );
+void DrawString( int ox, int oy, int width, ::std::wstring& s ) {
+    const int tw = ::TextWidth( s );
+    int offx = 0;
+
     if ( tw <= width )
-        ox += width / 2;
+        offx += width / 2;
     else
-        ox += FONTSPACE * ::Frame / 10.0;
+        offx += FONTSPACE * ::Frame / 30.0;
+
+    const int wlimit = width + tw / 2;
 
     for ( wchar_t& i : s ) {
-        ::Font f = ::ArchiveFont( i );
+        const ::Font& f = ::ArchiveFont( i );
 
-        for ( int y = 0; y < f.height; ++y )
+        const int sy = oy + f.yoff + FONTHEIGHT;
+
+        for ( int y = 0; y < f.height; ++y ) {
+            const int cy = y * f.width;
+
+            int dy = sy + y;
+            if ( dy >= WINHEIGHT )
+                break;
+            dy *= WINWIDTH;
+
             for ( int x = 0; x < f.width; ++x ) {
-                int dx = ( width + ox + x ) % ( width + tw / 2 );
+                ::uint32_t c = f.map[ cy + x ];
+                if ( ( c >> 24 ) == 0 )
+                    continue;
+
+                int dx = width + offx + x;
+                if ( dx >= wlimit )
+                    dx -= wlimit;
+
                 if ( dx < 0 || dx >= width )
                     continue;
 
-                ::uint32_t c = f.map[ y * f.width + x ];
-                if ( ( c >> 24 ) > 0 )
-                    ::SetPixel( dx, oy + y + f.yoff + FONTHEIGHT, c );
+                ::Canvas[ ox + dx + dy ] = c;
             }
+        }
 
-        ox += f.width;
+        offx += f.width;
 
         if ( i == ' ' )
-            ox += FONTSPACE;
+            offx += FONTSPACE;
     }
-}
-
-::HRESULT InitDraw() {
-    for ( ::UI* i : ::UI::Registry() )
-        i->Initialize();
-
-    return S_OK;
 }

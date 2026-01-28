@@ -6,7 +6,6 @@
 
 #include <windows.h>
 #include <unordered_set>
-#include <shared_mutex>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -15,33 +14,38 @@
 #include <thread>
 #include <random>
 #include <ranges>
+#include <mutex>
 #include <map>
 
-#define HR( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
-#define HER( hr ) do { ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
+#define HR( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
+#define HER( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
 #define THREAD( body ) do { ::std::thread( [ = ] { body } ).detach(); } while ( 0 )
 
+#define FUNCTION( func, ... ) do { ::std::cerr<<"function-"<<#func<<'\n'; ::Message( WM_FUNCTION, 0, ( ::LPARAM )&func, __VA_ARGS__ ); } while ( 0 )
+
 #define WM_QUEUENEXT ( WM_USER + 1 )
-#define WM_KEYBOARD ( WM_USER + 2 )
-#define WM_ACTION ( WM_USER + 3 )
-#define WM_DEVICE ( WM_USER + 4 )
-#define WM_MIXER ( WM_USER + 5 )
-#define WM_MOUSE ( WM_USER + 6 )
+#define WM_FUNCTION ( WM_USER + 2 )
+
+#define VK_SCROLL1 0x0E
+#define VK_SCROLL2 0x0F
+
+#define HELD( vk ) ( ::Toggled[ vk ] )
+#define PRESSED( vk ) ( ::Toggled[ vk ] && !::OldToggled[ vk ] )
+#define RELEASED( vk ) ( !::Toggled[ vk ] && ::OldToggled[ vk ] )
+#define DIRECTION( vk ) ( PRESSED( vk##1 ) ? 1 : PRESSED( vk##2 ) ? -1 : 0 )
+
+inline ::std::vector< ::std::function< void() > > FunctionQueue;
 
 inline ::HWND hwnd;
 inline ::HWND desktophwnd;
 inline ::HWND consolehwnd;
 
-extern ::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
-extern ::HRESULT InitializeMixer();
-extern ::HRESULT InitializeFont();
+extern ::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove );
 extern ::HRESULT InitGraphics();
 extern ::HRESULT InitDevice();
 extern ::HRESULT InitInput();
-extern ::HRESULT InitDraw();
-
-extern void Mouse( int c, ::LPARAM l );
-extern void Keyboard( int c, ::LPARAM l );
+extern ::HRESULT InitMixer();
+extern ::HRESULT InitFont();
 
 namespace String {
     template< typename... Args >
@@ -144,14 +148,38 @@ inline int RNG() {
     return distribution( seed );
 }
 
-inline void Message( ::UINT wm, ::WPARAM wParam, ::LPARAM lParam ) {
+inline void Message( ::UINT wm, ::WPARAM wParam = 0, ::LPARAM lParam = 0, bool block = true ) {
     ::MSG msg = { 0 };
-    if ( !::PeekMessageW( &msg, ::hwnd, wm, wm, PM_NOREMOVE ) )
-        ::PostMessageW( ::hwnd, wm, wParam, lParam );
+    if ( !::PeekMessageW( &msg, ::hwnd, wm, wm, PM_NOREMOVE ) ) {
+        if ( block )
+            ::SendMessageW( ::hwnd, wm, wParam, lParam );
+        else
+            ::PostMessageW( ::hwnd, wm, wParam, lParam );
+    }
 }
 
 template < typename T >
 inline void EnumNext( T& e, bool b = false ) { e = ( T )( ( ( int )e - ( ( int )b * 2 - 1 ) + ( int )T::Count ) % ( int )T::Count ); }
+
+template< typename T >
+struct relaxed_atomic {
+    ::std::atomic< T > v;
+
+    relaxed_atomic() = default;
+    constexpr relaxed_atomic( T value ) : v( value ) {}
+
+    operator T() const noexcept {
+        return v.load( ::std::memory_order_relaxed );
+    }
+
+    relaxed_atomic& operator=( T value ) noexcept {
+        v.store( value, ::std::memory_order_relaxed );
+        return *this;
+    }
+};
+
+inline ::relaxed_atomic< bool > Toggled[ UINT8_MAX ];
+inline ::relaxed_atomic< bool > OldToggled[ UINT8_MAX ];
 
 struct Rect {
     int l, t, r, b;
@@ -175,7 +203,7 @@ struct Rect {
     int width() const { return r - l; }
     int height() const { return b - t; }
     bool empty() const { return t == b || l == r; }
-    bool within( ::POINT p ) const { return p.x >= l && p.x <= r && p.y >= t && p.y <= b; }
+    bool within( ::POINT p ) const { return p.x >= l && p.x < r && p.y >= t && p.y < b; }
     bool operator==( const ::Rect& c ) const { return l == c.l && t == c.t && r == c.r && b == c.b; }
     ::POINT topleft() const { return { l, t }; }
     ::POINT topright() const { return { r, t }; }
@@ -190,28 +218,7 @@ namespace std {
 }
 
 namespace Input {
-    inline ::Rect hover;
-
-    inline bool passthrough;
-
-    inline ::std::atomic< bool > State[ VK_OEM_CLEAR ];
-
     inline ::POINT mouse;
 
-    struct Click;
-    inline ::std::unordered_map< ::Rect, Click > clicks;
-
-    extern ::std::unordered_map< ::DWORD, ::std::function< bool( bool ) > > globalkey;
-
-    struct Click {
-        ::std::function< void() > hvr;
-        ::std::function< void() > lmb;
-        ::std::function< void() > rmb;
-        ::std::function< void() > mmb;
-        ::std::function< void( int ) > xmb;
-        ::std::function< void( int ) > scrl;
-        ::std::function< void( ::DWORD ) > key;
-
-        static void create( ::Rect& rect, Click& c ) { clicks[ rect ] = ::std::move( c ); }
-    };
+    extern ::std::unordered_map< ::DWORD, ::std::function< bool() > > globalkey;
 };

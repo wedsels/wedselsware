@@ -36,14 +36,16 @@ bool FileReady( const wchar_t* p ) {
     return paths;
 }
 
-void UpdateDirectories( ::MSG& msg ) {
+void UpdateDirectories() {
+    ::MSG msg = { 0 };
+
     for ( auto& dir : ::Directories ) {
         ::Directory& d = dir.second;
 
         while ( !d.fileremove.empty() && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
             ::std::wstring& p = d.fileremove.back();
             ::uint32_t hash = ::String::Hash( p );
-
+// MAKE THIS FOR ALL DIRECTORIES
             if ( ::Saved::Songs.contains( hash ) )
                 d.remove( hash );
             else
@@ -148,7 +150,7 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
     map.erase( id );
 }
 
-::HRESULT InitializeDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
+::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( const wchar_t* ) > add, ::std::function< void( ::uint32_t ) > remove ) {
     ::Directory dir = { add, remove, {} };
 
     for ( auto& i : ::std::filesystem::directory_iterator( path, ::std::filesystem::directory_options::skip_permission_denied ) )
@@ -168,7 +170,7 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
                     ::Directories[ path ].fileremove.push_back( fpath );
             };
 
-            ::SendMessageW( hwnd, WM_ACTION, ( ::WPARAM )&func, 0 );
+            FUNCTION( func );
         } );
     );
 

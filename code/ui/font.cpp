@@ -43,7 +43,7 @@ int TextWidth( ::std::wstring& text ) {
     return ::Font::Letters[ c ];
 }
 
-::HRESULT InitializeFont() {
+::HRESULT InitFont() {
     ::std::ifstream file( "onryou.ttf", ::std::ios::binary | ::std::ios::ate );
     if ( !file )
         return E_FAIL;

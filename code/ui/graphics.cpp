@@ -10,9 +10,11 @@
 #pragma comment( lib, "dcomp.lib" )
 #pragma comment( lib, "d3dcompiler.lib" )
 
+#define SAFE_RELEASE( p ) do { if ( p ) { p->Release(); p = nullptr; } } while ( 0 )
+
 ::ID3D11Device* Device = nullptr;
 ::ID3D11Buffer* Buffer = nullptr;
-::IDXGISwapChain1* SwapChain = nullptr;
+::IDXGISwapChain1* Swap = nullptr;
 ::ID3D11Texture2D* Texture = nullptr;
 ::ID3D11PixelShader* PShader = nullptr;
 ::ID3D11InputLayout* Layout = nullptr;
@@ -20,11 +22,11 @@
 ::ID3D11SamplerState* Sampler = nullptr;
 ::IDCompositionDevice* DCDevice = nullptr;
 ::IDCompositionTarget* DCTarget = nullptr;
-::IDCompositionVisual* RootVisual = nullptr;
-::IDCompositionVisual* D3DVisual = nullptr;
+::IDCompositionVisual* Root = nullptr;
+::IDCompositionVisual* D3D = nullptr;
 ::ID3D11DeviceContext* Context = nullptr;
-::ID3D11RenderTargetView* RenderView = nullptr;
-::ID3D11ShaderResourceView* ResourceView = nullptr;
+::ID3D11RenderTargetView* Target = nullptr;
+::ID3D11ShaderResourceView* Resource = nullptr;
 
 struct Vertex {
     float pos[ 2 ];
@@ -93,19 +95,19 @@ const char* g_psCode = R"(
     desc.AlphaMode = ::DXGI_ALPHA_MODE_PREMULTIPLIED;
     desc.Flags = ::DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
-    HR( factory->CreateSwapChainForComposition( ::Device, &desc, nullptr, &::SwapChain ) );
+    HR( factory->CreateSwapChainForComposition( ::Device, &desc, nullptr, &::Swap ) );
     factory->Release();
 
     ::ID3D11Texture2D* bbuffer = nullptr;
-    HR( ::SwapChain->GetBuffer( 0, __uuidof( ::ID3D11Texture2D ), ( void** )&bbuffer ) );
+    HR( ::Swap->GetBuffer( 0, __uuidof( ::ID3D11Texture2D ), ( void** )&bbuffer ) );
 
-    HR( ::Device->CreateRenderTargetView( bbuffer, nullptr, &::RenderView ) );
+    HR( ::Device->CreateRenderTargetView( bbuffer, nullptr, &::Target ) );
     bbuffer->Release();
 
     return S_OK;
 }
 
-::HRESULT CreateDynamicTexture() {
+::HRESULT InitTexture() {
     ::D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = WINWIDTH;
     desc.Height = WINHEIGHT;
@@ -124,7 +126,7 @@ const char* g_psCode = R"(
     rdesc.ViewDimension = ::D3D11_SRV_DIMENSION_TEXTURE2D;
     rdesc.Texture2D.MipLevels = 1;
 
-    HR( ::Device->CreateShaderResourceView( ::Texture, &rdesc, &::ResourceView ) );
+    HR( ::Device->CreateShaderResourceView( ::Texture, &rdesc, &::Resource ) );
 
     ::D3D11_SAMPLER_DESC sdesc = {};
     sdesc.Filter = ::D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -140,7 +142,7 @@ const char* g_psCode = R"(
     return S_OK;
 }
 
-::HRESULT CreateShadersAndQuad() {
+::HRESULT InitShaders() {
     ::ID3DBlob* vblob = nullptr;
     ::ID3DBlob* pblob = nullptr;
     ::ID3DBlob* eblob = nullptr;
@@ -182,15 +184,15 @@ const char* g_psCode = R"(
     return S_OK;
 }
 
-::HRESULT InitDirectComposition() {
+::HRESULT InitComposition() {
     HR( ::DCompositionCreateDevice( nullptr, __uuidof( ::IDCompositionDevice ), ( void** )&::DCDevice ) );
     HR( ::DCDevice->CreateTargetForHwnd( hwnd, TRUE, &::DCTarget ) );
-    HR( ::DCDevice->CreateVisual( &::RootVisual ) );
-    HR( ::DCDevice->CreateVisual( &::D3DVisual ) );
-    HR( ::D3DVisual->SetContent( ::SwapChain ) );
-    HR( ::RootVisual->AddVisual( ::D3DVisual, FALSE, nullptr ) );
+    HR( ::DCDevice->CreateVisual( &::Root ) );
+    HR( ::DCDevice->CreateVisual( &::D3D ) );
+    HR( ::D3D->SetContent( ::Swap ) );
+    HR( ::Root->AddVisual( ::D3D, FALSE, nullptr ) );
 
-    ::DCTarget->SetRoot( ::RootVisual );
+    ::DCTarget->SetRoot( ::Root );
 
     HR( ::DCDevice->Commit() );
 
@@ -212,61 +214,113 @@ const char* g_psCode = R"(
 
     ::Context->PSSetSamplers( 0, 1, &::Sampler );
 
-    ::Context->PSSetShaderResources( 0, 1, &::ResourceView );
+    ::Context->PSSetShaderResources( 0, 1, &::Resource );
 
     HR( ::DCDevice->Commit() );
 
-    ::D3D11_MAPPED_SUBRESOURCE Mapped;
-    HR( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &Mapped ) );
+    ::D3D11_MAPPED_SUBRESOURCE map;
+    HR( ::Context->Map( ::Texture, 0, ::D3D11_MAP_WRITE_DISCARD, 0, &map ) );
 
-    if ( !( ::Canvas = ( ::uint32_t* )Mapped.pData ) )
+    if ( !( ::Canvas = ( ::uint32_t* )map.pData ) )
         return E_FAIL;
 
     return S_OK;
 }
 
-void RenderFrame() {
-    ::Context->OMSetRenderTargets( 1, &::RenderView, nullptr );
+void Restart() {
+    if ( ::Context ) {
+        if( ::Texture )
+            ::Context->Unmap(Texture, 0);
+        ::Context->ClearState();
+        ::Context->Flush();
+    }
+
+    SAFE_RELEASE( ::Resource );
+    SAFE_RELEASE( ::Target );
+    SAFE_RELEASE( ::Root );
+    SAFE_RELEASE( ::Swap );
+    SAFE_RELEASE( ::D3D );
+    SAFE_RELEASE( ::DCDevice );
+    SAFE_RELEASE( ::DCTarget );
+    SAFE_RELEASE( ::Context );
+    SAFE_RELEASE( ::Texture );
+    SAFE_RELEASE( ::VShader );
+    SAFE_RELEASE( ::PShader );
+    SAFE_RELEASE( ::Sampler );
+    SAFE_RELEASE( ::Device );
+    SAFE_RELEASE( ::Layout );
+    SAFE_RELEASE( ::Buffer );
+
+    ::InitGraphics();
+}
+
+bool RenderFrame() {
+    ::Context->OMSetRenderTargets( 1, &::Target, nullptr );
     ::Context->Draw( 6, 0 );
 
-    ::SwapChain->Present( 0, DXGI_PRESENT_ALLOW_TEARING );
+    if ( FAILED( ::Swap->Present( 0, DXGI_PRESENT_ALLOW_TEARING ) ) )
+        return false;
+
+    return true;
+}
+
+bool CheckSlide() {
+    static int last;
+
+    int s = ::UI::Slide;
+
+    if ( last == s )
+        return false;
+
+    if ( last < s )
+        ::std::memset( ::Canvas, 0, ::CanvasSize );
+
+    last = s;
+
+    return true;
 }
 
 ::HRESULT InitGraphics() {
     HR( ::InitD3D11() );
-    HR( ::CreateDynamicTexture() );
-    HR( ::CreateShadersAndQuad() );
-    HR( ::InitDirectComposition() );
+    HR( ::InitTexture() );
+    HR( ::InitShaders() );
+    HR( ::InitComposition() );
     HR( ::InitFrame() );
 
-    THREAD(
-        const auto period = ::std::chrono::duration_cast< ::std::chrono::steady_clock::duration >( ::std::chrono::duration< double >( 1.0 / 175.0 ) );
-        ::std::chrono::time_point next = ::std::chrono::steady_clock::now();
+    for ( auto& i : ::UI::UIs )
+        i->Initialize();
 
-        ::std::shared_lock< ::std::shared_mutex > lock( ::CanvasMutex );
+    THREAD(
+        const auto period = ::std::chrono::duration_cast< ::std::chrono::steady_clock::duration >( ::std::chrono::duration< double >( 1.0 / 240.0 ) );
+        ::std::chrono::time_point next = ::std::chrono::steady_clock::now();
 
         while ( true ) {
             ::std::this_thread::sleep_until( next += period );
 
-            if ( ::PauseDraw ) {
-                if ( !::Input::clicks.empty() ) {
-                    ::std::memset( ::Canvas, 0, ::CanvasSize );
+            bool draw = false;
 
-                    for ( ::UI* i : ::UI::Registry() )
-                        i->Clear();
+            ::UI::PreDraw();
 
-                    ::Input::clicks.clear();
-                    ::RenderFrame();
-                }
-            } else {
-                for ( ::UI* i : ::UI::Registry() )
+            bool slid = ::CheckSlide();
+
+            for ( ::UI* i : ::UI::UIs ) {
+                ::std::lock_guard< ::std::mutex > lock( ::CanvasMutex );
+
+                if ( i->Active() && ( slid || !i->BlockDraw() ) ) {
                     i->Draw();
-
-                ::RenderFrame();
+                    draw = true;
+                }
             }
+
+            if ( draw )
+                if ( !::RenderFrame() )
+                    break;
 
             ::Frame++;
         }
+
+        ::Frame = 0;
+        ::Restart();
     );
 
     return S_OK;

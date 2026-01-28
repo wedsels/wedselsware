@@ -3,8 +3,7 @@
 #include <regex>
 
 void SetSong( ::uint32_t song ) {
-    bool before = ::PauseAudio;
-    ::PauseAudio = true;
+    ::std::lock_guard< ::std::mutex > lock( ::SeekMutex );
 
     if ( !::Saved::Songs.contains( song ) )
         return::Remove( song );
@@ -20,14 +19,8 @@ void SetSong( ::uint32_t song ) {
     }
 
     ::Saved::Playing = s.ID;
-    ::SetVolume();
-    ::swr_inject_silence( ::Playing.SWR, ::Device.sampleRate / 100 * 2 );
 
     ::cursor = 0;
-
-    ::DisplayOffset = ::Index( ::display, s.ID );
-
-    ::PauseAudio = before;
 }
 
 ::std::wstring NormalizeString( const char str[] ) {
@@ -94,14 +87,14 @@ void ArchiveSong( ::std::wstring p ) {
     media.Duration = SecondPlay.Duration;
     media.Bitrate = SecondPlay.Bitrate;
 
-    ::uint32_t* mini = ::ResizeImage( SecondPlay.Cover, ::MIDPOINT, ::MIDPOINT, MINICOVER );
+    ::uint32_t* mini = ::ResizeImage( SecondPlay.Cover, MIDPOINT, MIDPOINT, MINICOVER );
     if ( mini )
         ::std::memcpy( media.Minicover, mini, sizeof( media.Minicover ) );
     ::delete[] mini;
 
     ::Clean( SecondPlay );
 
-    ::std::wstring dir = ::String::WConcat( SongPath, media.Artist, L"/", media.Album, L"/" );
+    ::std::wstring dir = ::String::WConcat( ::SongPath, media.Artist, L"/", media.Album, L"/" );
     ::Path( dir );
 
     if ( !::std::filesystem::is_directory( dir ) )
@@ -111,9 +104,7 @@ void ArchiveSong( ::std::wstring p ) {
     ::Path( expected );
 
     if ( p != expected && ::std::filesystem::exists( expected ) )
-        expected = ::String::WConcat( dir, media.Title, L" - ", media.Write, L'.', media.Encoding );
-
-    ::Path( expected );
+        ::Path( expected = ::String::WConcat( dir, media.Title, L" - ", media.Write, L'.', media.Encoding ) );
 
     if ( p != expected )
         ::std::filesystem::rename( p, expected );
@@ -125,8 +116,10 @@ void ArchiveSong( ::std::wstring p ) {
     if ( ::Saved::Volumes.find( media.ID ) == ::Saved::Volumes.end() )
         ::Saved::Volumes[ media.ID ] = 0.15;
 
+    ::std::lock_guard< ::std::mutex > lock( ::CanvasMutex );
+
     ::Saved::Songs[ media.ID ] = media;
-    ::display.push_back( media.ID );
+    ::SongDisplay.push_back( media.ID );
 
     if ( media.ID == ::Saved::Playing )
         ::SetSong( media.ID );
@@ -152,12 +145,12 @@ void ArchiveSong( ::std::wstring p ) {
 
         ::AVMediaType mt = ::avcodec_get_type( stream->codecpar->codec_id );
 
-        if ( mt == AVMEDIA_TYPE_VIDEO ) {
+        if ( mt == ::AVMEDIA_TYPE_VIDEO ) {
             ::AVPacket* p = ::av_packet_alloc();
             if ( ::av_read_frame( play.Format, p ) == 0 )
                 if ( p->size > 0 && p->stream_index == i ) {
                     if ( !play.Cover[ 0 ] ) {
-                        ::uint32_t* cover = ::ArchiveImage( p->data, p->size, ::MIDPOINT );
+                        ::uint32_t* cover = ::ArchiveImage( p->data, p->size, MIDPOINT );
                         if ( cover )
                             ::std::memcpy( play.Cover, cover, sizeof( play.Cover ) );
                         ::delete[] cover;
@@ -169,7 +162,7 @@ void ArchiveSong( ::std::wstring p ) {
                 continue;
 
             play.Duration = ( ::uint16_t )( stream->duration / ( double )stream->time_base.den );
-            play.Timebase = ::av_q2d( stream->time_base );
+            play.Timebase = stream->time_base;
             play.Stream = i;
 
             const ::AVCodec* codec = ::avcodec_find_decoder( stream->codecpar->codec_id );

@@ -2,54 +2,52 @@
 #include "audio/audio.hpp"
 
 namespace Input {
-    ::std::unordered_map< ::DWORD, ::std::function< bool( bool ) > > globalkey = {
-        { VK_HOME, []( bool down ) {
-            if ( down ) {
-                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
-                    ::PauseDraw = !::PauseDraw;
+    ::std::unordered_map< ::DWORD, ::std::function< bool() > > globalkey = {
+        { VK_HOME, []() {
+            if ( PRESSED( VK_HOME ) ) {
+                if ( ( ::PauseAudio = !::PauseAudio ) )
+                    ::SetThreadExecutionState( ES_CONTINUOUS );
                 else
-                    if ( ( ::PauseAudio = !::PauseAudio ) )
-                        ::SetThreadExecutionState( ES_CONTINUOUS );
-                    else
-                        ::SetThreadExecutionState( ES_CONTINUOUS | ES_DISPLAY_REQUIRED );
+                    ::SetThreadExecutionState( ES_CONTINUOUS | ES_DISPLAY_REQUIRED );
             }
 
             return true;
         } },
-        { VK_PRIOR, []( bool down ) {
-            if ( down ) {
-                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
+        { VK_PRIOR, []() {
+            if ( PRESSED( VK_PRIOR ) ) {
+                if ( HELD( VK_CONTROL ) )
                     ::queue::next( 1 );
                 else
-                    ::SetVolume( 0.05 );
+                    ::Saved::Volumes[ ::Saved::Playing ] = ::std::max( 0.0, ::Saved::Volumes[ ::Saved::Playing ] + 0.05 );
             }
 
             return true;
         } },
-        { VK_NEXT, []( bool down ) {
-            if ( down ) {
-                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
+        { VK_NEXT, []() {
+            if ( PRESSED( VK_NEXT ) ) {
+                if ( HELD( VK_CONTROL ) )
                     ::queue::next( -1 );
                 else
-                    ::SetVolume( -0.05 );
+                    ::Saved::Volumes[ ::Saved::Playing ] = ::std::max( 0.0, ::Saved::Volumes[ ::Saved::Playing ] - 0.05 );
             }
 
             return true;
         } },
-        { VK_CAPITAL, []( bool down ) {
-            if ( !down ) {
-                if ( ::Input::State[ VK_CONTROL ].load( ::std::memory_order_relaxed ) )
+        { VK_CAPITAL, []() {
+            if ( PRESSED( VK_CAPITAL ) ) {
+                ::SetTop();
+
+                if ( HELD( VK_CONTROL ) )
                     ::Execute( L"cmd.exe", 2 );
-                else if ( ::Input::State[ VK_MENU ].load( ::std::memory_order_relaxed ) )
+                else if ( HELD( VK_MENU ) )
                     ::SetDefaultDevice();
-                else if ( ::Input::State[ VK_SHIFT ].load( ::std::memory_order_relaxed ) )
-                    ::ShowWindow( ::consolehwnd, ::IsWindowVisible( ::consolehwnd ) ? SW_HIDE : SW_SHOW );
-                else
+                else if ( HELD( VK_SHIFT ) )
                     ::Execute( L"C:\\Program Files\\Mozilla Firefox\\firefox.exe" );
+                else
+                    ::ShowWindow( ::consolehwnd, ::IsWindowVisible( ::consolehwnd ) ? SW_HIDE : SW_SHOW );
             }
 
             return true;
-        } },
-        { VK_END, []( bool down ) { if ( down ) ::Input::passthrough = !::Input::passthrough; return true; } }
+        } }
     };
 }
