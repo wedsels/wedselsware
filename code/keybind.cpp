@@ -35,8 +35,6 @@ namespace Input {
         } },
         { VK_CAPITAL, []() {
             if ( PRESSED( VK_CAPITAL ) ) {
-                ::SetTop();
-
                 if ( HELD( VK_CONTROL ) )
                     ::Execute( L"cmd.exe", 2 );
                 else if ( HELD( VK_MENU ) )

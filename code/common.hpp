@@ -17,6 +17,16 @@
 #include <mutex>
 #include <map>
 
+#define MINICOVER 64
+#define FONTHEIGHT 16
+#define FONTSPACE 8
+#define WINLEFT 3440
+#define WINTOP 0
+#define WINWIDTH 2560
+#define WINHEIGHT 1440
+#define MIDPOINT 512
+#define SEEK 12
+
 #define HR( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
 #define HER( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
 #define THREAD( body ) do { ::std::thread( [ = ] { body } ).detach(); } while ( 0 )
@@ -110,7 +120,11 @@ inline void Box( T... text ) {
     ::MessageBoxW( NULL, wss.str().c_str(), L"", MB_OK );
 }
 
+inline void SetTop() { ::SetWindowPos( ::hwnd, HWND_TOPMOST, WINLEFT, WINTOP, WINWIDTH, WINHEIGHT, SWP_NOACTIVATE ); }
+
 inline void Execute( ::std::wstring str, int type = 0 ) {
+    ::SetTop();
+
     for ( auto& i : str )
         if ( i == '/' )
             i = '\\';
@@ -124,8 +138,6 @@ inline void Execute( ::std::wstring str, int type = 0 ) {
     ::PROCESS_INFORMATION pi = { 0 };
     ::STARTUPINFOW si = { 0 };
     si.cb = sizeof( si );
-    ::SetForegroundWindow( desktophwnd );
-    ::SetFocus( desktophwnd );
     ::CreateProcessW( NULL, ( ::LPWSTR )str.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi );
 }
 

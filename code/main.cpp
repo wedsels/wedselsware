@@ -110,7 +110,7 @@ void Load() {
     ::WNDCLASSW wc = { 0 };
     wc.lpfnWndProc = ::WndProc;
     wc.hInstance = hInstance;
-    wc.lpszClassName = L"Wedsels' Window";
+    wc.lpszClassName = L"wedselswindow";
     wc.hIcon = ( ::HICON )::LoadImageW( hInstance, MAKEINTRESOURCEW( IDI_ICON1 ), IMAGE_ICON, 256, 256, LR_SHARED );
 
     ::RegisterClassW( &wc );

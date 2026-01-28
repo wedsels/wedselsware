@@ -13,16 +13,6 @@
 #define COLORCORAL 0xFF6370EC
 #define COLORCOLD 0xFFF1F0EC
 
-#define MINICOVER 64
-#define FONTHEIGHT 16
-#define FONTSPACE 8
-#define WINLEFT 3440
-#define WINTOP 0
-#define WINWIDTH 2560
-#define WINHEIGHT 1440
-#define MIDPOINT 512
-#define SEEK 12
-
 inline ::uint32_t Frame;
 
 inline ::std::mutex CanvasMutex;
@@ -46,8 +36,6 @@ extern void SetPixel( int x, int y, ::uint32_t color );
 extern void DrawBox( ::Rect& t, ::uint32_t b );
 extern void DrawImage( ::Rect& r, ::uint32_t* img );
 extern void DrawString( int x, int y, int width, ::std::wstring& s );
-
-inline void SetTop() { ::SetWindowPos( ::hwnd, HWND_TOPMOST, WINLEFT, WINTOP, WINWIDTH, WINHEIGHT, SWP_NOACTIVATE ); }
 
 inline bool EmptyImage( const ::uint32_t* img, ::size_t s ) {
     for ( ::size_t i = 0; i < s; ++i )
