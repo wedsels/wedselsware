@@ -1,4 +1,3 @@
-#include "common.hpp"
 #include "binary.hpp"
 #include "audio/audio.hpp"
 
@@ -17,11 +16,6 @@ void Save() {
 
     ::Serializer s;
 
-    SERIALIZE( Apps );
-    SERIALIZE( AppsPath );
-    SERIALIZE( Webs );
-    SERIALIZE( WebsPath );
-
     SERIALIZE( Playing );
     SERIALIZE( Sorting );
     SERIALIZE( Playback );
@@ -29,7 +23,6 @@ void Save() {
     SERIALIZE( Queues );
     SERIALIZE( Volumes );
     SERIALIZE( Mixers );
-    SERIALIZE( Songs );
 }
 
 void Load() {
@@ -38,11 +31,6 @@ void Load() {
 
     ::Deserializer d;
 
-    DESERIALIZE( Apps );
-    DESERIALIZE( AppsPath );
-    DESERIALIZE( Webs );
-    DESERIALIZE( WebsPath );
-
     DESERIALIZE( Playing );
     DESERIALIZE( Sorting );
     DESERIALIZE( Playback );
@@ -50,14 +38,6 @@ void Load() {
     DESERIALIZE( Queues );
     DESERIALIZE( Volumes );
     DESERIALIZE( Mixers );
-    DESERIALIZE( Songs );
-
-    for ( auto& i : ::Saved::Songs | ::std::views::reverse )
-        if ( ::std::filesystem::exists( i.second.Path ) )
-            ::SongDisplay.push_back( i.first );
-        else
-            ::Remove( i.first );
-    ::Sort();
 
     if ( ::Saved::Queues.empty() || ::Saved::Queue >= ::Saved::Queues.size() ) {
         ::Saved::Queue = 0;
@@ -67,7 +47,7 @@ void Load() {
     ::Loaded = true;
 }
 
-::LONG WINAPI Crash( ::EXCEPTION_POINTERS* exceptionInfo ) {
+::LONG WINAPI Crash( ::EXCEPTION_POINTERS* ) {
     ::Save();
 
     return EXCEPTION_EXECUTE_HANDLER;
@@ -82,26 +62,28 @@ void Load() {
 }
 
 ::LRESULT CALLBACK WndProc( ::HWND hwnd, ::UINT msg, ::WPARAM wParam, ::LPARAM lParam ) {
-    if ( msg == WM_DESTROY || msg == SC_CLOSE || msg == WM_QUERYENDSESSION || msg == WM_ENDSESSION || msg == WM_CLOSE || msg == WM_QUIT ) {
+    if ( MQUIT( msg ) )
         ::Save();
-        return TRUE;
-    }
 
     switch ( msg ) {
         case WM_NCHITTEST:
             return HTTRANSPARENT;
-        case WM_QUEUENEXT:
-                ::queue::next( 1 );
-            break;
         case WM_FUNCTION: {
                 ::std::function< void() >* f = ( ::std::function< void() >* )( lParam );
                 if ( f ) ( *f )();
             } break;
+        case WM_VOID: {
+                auto* v = ( void( * )() )( lParam );
+                if ( v ) ( *v )();
+            } break;
+        case WM_SLEEP:
+            if ( wParam )
+                ::SetThreadExecutionState( ES_CONTINUOUS );
+            else
+                ::SetThreadExecutionState( ES_CONTINUOUS | ES_DISPLAY_REQUIRED );
     }
 
-    ::UpdateDirectories();
-
-    return ::DefWindowProcA( hwnd, msg, wParam, lParam );
+    return ::DefWindowProcW( hwnd, msg, wParam, lParam );
 }
 
 ::HWND Window( ::HINSTANCE hInstance ) {
@@ -116,7 +98,7 @@ void Load() {
     ::RegisterClassW( &wc );
 
     ::HWND hwnd = ::CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        NULL,
         wc.lpszClassName,
         wc.lpszClassName,
         WS_POPUP | WS_VISIBLE,
@@ -124,7 +106,6 @@ void Load() {
         nullptr, nullptr, hInstance, nullptr
     );
 
-    ::SetLayeredWindowAttributes( hwnd, 0, 255, LWA_ALPHA );
     ::ShowWindow( hwnd, SW_SHOW );
 
     return hwnd;
@@ -133,11 +114,11 @@ void Load() {
 void RemoveSong( ::std::wstring& p ) {
     ::uint32_t hash = ::String::Hash( p );
 
-    if ( ::Saved::Songs.contains( hash ) )
+    if ( ::Library.contains( hash ) )
         ::Remove( hash );
     else
-        for ( auto& i : ::Saved::Songs | ::std::views::reverse )
-            if ( ::wcsstr( i.second.Path, p.c_str() ) )
+        for ( auto& i : ::Library | ::std::views::reverse )
+            if ( i.second.Path.contains( p ) )
                 ::Remove( i.first );
 }
 
@@ -148,12 +129,17 @@ void SyncDirectory( const ::std::wstring& source, const ::std::wstring& destinat
         ::std::filesystem::copy_options::recursive | ::std::filesystem::copy_options::skip_existing
     );
 
-    for ( const ::std::filesystem::path& entry : ::std::filesystem::recursive_directory_iterator( L"E:/Sounds" ) )
+    ::std::vector< ::std::filesystem::path > remove = {};
+
+    for ( const ::std::filesystem::path& entry : ::std::filesystem::recursive_directory_iterator( destination ) )
         if ( !::std::filesystem::exists( source / ::std::filesystem::relative( entry, destination ) ) )
-            ::std::filesystem::remove_all( entry );
+            remove.push_back( entry );
+    
+    for ( auto& i : remove )
+        ::std::filesystem::remove_all( i );
 }
 
-int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
+::HRESULT Main( ::HINSTANCE hInstance ) {
     ::SetUnhandledExceptionFilter( ::Crash );
     ::SetConsoleCtrlHandler( ::CtrlHandler, TRUE );
     ::std::atexit( ::Save );
@@ -176,31 +162,41 @@ int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
 
     ::Load();
 
+    HR( ::CoInitialize( NULL ) );
+
     ::hwnd = ::Window( hInstance );
     ::desktophwnd = ::FindWindowExW( ::FindWindowW( L"Progman", NULL ), NULL, L"SHELLDLL_DefView", NULL );
 
-    HER( ::CoInitialize( NULL ) );
-
-    HER( ::InitDirectory( L"E:/Apps/", []( ::std::wstring& p ) { ::ArchiveLink( p, ::Saved::Apps, ::Saved::AppsPath ); }, []( ::std::wstring& p ) { ::DeleteLink( ::String::Hash( p ), ::Saved::Apps, ::Saved::AppsPath ); } ) );
-    HER( ::InitDirectory( L"E:/Webs/", []( ::std::wstring& p ) { ::ArchiveLink( p, ::Saved::Webs, ::Saved::WebsPath ); }, []( ::std::wstring& p ) { ::DeleteLink( ::String::Hash( p ), ::Saved::Webs, ::Saved::WebsPath ); } ) );
-    HER( ::InitDirectory( ::SongPath.c_str(), ::ArchiveSong, ::RemoveSong ) );
-
-    HER( ::InitFont() );
-    HER( ::InitGraphics() );
-    HER( ::InitDevice() );
-    HER( ::InitInput() );
-    HER( ::InitMixer() );
+    HR( ::InitFont() );
+    HR( ::InitGraphics() );
+    HR( ::InitDevice() );
+    HR( ::InitMixer() );
+    HR( ::InitAudio() );
+    HR( ::InitKeys() );
+    HR( ::InitInput() );
 
     ::SyncDirectory( ::SongPath, L"E:/Sounds" );
 
+    HR( ::InitDirectory( L"E:/Apps/", []( ::std::wstring& p ) { ::ArchiveLink( p, ::Apps, ::AppsPath ); }, []( ::std::wstring& p ) { ::DeleteLink( ::String::Hash( p ), ::Apps, ::AppsPath ); }, []() { ::SortLink( ::Apps, ::AppsPath ); } ) );
+    HR( ::InitDirectory( L"E:/Webs/", []( ::std::wstring& p ) { ::ArchiveLink( p, ::Webs, ::WebsPath ); }, []( ::std::wstring& p ) { ::DeleteLink( ::String::Hash( p ), ::Webs, ::WebsPath ); }, []() { ::SortLink( ::Webs, ::WebsPath ); } ) );
+    HR( ::InitDirectory( ::SongPath.c_str(), ::ArchiveSong, ::RemoveSong, ::Sort ) );
+
     ::MSG msg = { 0 };
     while ( ::GetMessageW( &msg, NULL, 0, 0 ) ) {
-        if ( msg.message == WM_QUIT )
+        if ( MQUIT( msg.message ) )
             break;
 
         ::TranslateMessage( &msg );
         ::DispatchMessageW( &msg );
     }
+
+    ::Save();
+
+    return S_OK;
+}
+
+int WINAPI wWinMain( ::HINSTANCE hInstance, ::HINSTANCE, ::PWSTR, int ) {
+    TRY( ::Main( hInstance ) );
 
     ::Save();
 

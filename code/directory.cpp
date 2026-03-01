@@ -1,16 +1,7 @@
 #include "audio/audio.hpp"
 
-struct Directory {
-    ::std::function< void( ::std::wstring& ) > add;
-    ::std::function< void( ::std::wstring& ) > remove;
-    mutable ::std::vector< ::std::wstring > fileremove;
-    mutable ::std::vector< ::std::wstring > fileadd;
-};
-
-::std::unordered_map< const wchar_t*, ::Directory > Directories = {};
-
-bool FileReady( const wchar_t* p ) {
-    ::HANDLE h = ::CreateFileW( p, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+bool FileReady( ::std::wstring& p ) {
+    ::HANDLE h = ::CreateFileW( p.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 
     if ( h == INVALID_HANDLE_VALUE )
         return false;
@@ -20,47 +11,20 @@ bool FileReady( const wchar_t* p ) {
     return true;
 }
 
-::std::vector< ::std::wstring > IterateDirectory( ::MSG& msg, const ::std::filesystem::path& path ) {
+::std::vector< ::std::wstring > IterateDirectory( const ::std::filesystem::path& path ) {
     ::std::vector< ::std::wstring > paths;
 
     if ( ::std::filesystem::is_regular_file( path ) && !::std::filesystem::is_symlink( path ) )
         paths.push_back( path.wstring() );
     else if ( ::std::filesystem::is_directory( path ) ) {
         for ( const auto& entry : ::std::filesystem::directory_iterator( path, ::std::filesystem::directory_options::skip_permission_denied ) )
-            paths.insert_range( paths.end(), ::IterateDirectory( msg, entry.path() ) );
+            paths.insert_range( paths.end(), ::IterateDirectory( entry.path() ) );
 
         if ( ::std::filesystem::is_empty( path ) )
             ::std::filesystem::remove( path );
     }
 
     return paths;
-}
-
-void UpdateDirectories() {
-    ::MSG msg = { 0 };
-
-    for ( auto& dir : ::Directories ) {
-        ::Directory& d = dir.second;
-
-        while ( !d.fileremove.empty() && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
-            d.remove( d.fileremove.back() );
-
-            d.fileremove.pop_back();
-        }
-
-        bool status = false;
-        while ( !status && !d.fileadd.empty() && !::PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
-            for ( auto& i : ::IterateDirectory( msg, d.fileadd.back() ) )
-                if ( ::FileReady( i.c_str() ) )
-                    d.add( i );
-                else status = true;
-
-            if ( status )
-                d.fileadd.emplace( d.fileadd.begin(), d.fileadd.back() );
-
-            d.fileadd.pop_back();
-        }
-    }
 }
 
 void WatchDirectory( const wchar_t* path, ::std::function< void( int, const wchar_t* ) > action ) {
@@ -120,14 +84,9 @@ void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::
         return;
 
     ::Launch launch;
-    ::wcsncpy_s( launch.path, MAX_PATH, res.c_str(), MAX_PATH - 1 );
+    launch.Path = res;
 
-    ::std::memset( launch.img, 0, sizeof( launch.img ) );
-
-    ::uint32_t* icon = ::ArchiveHICON( res.c_str(), MINICOVER );
-    if ( icon )
-        ::std::memcpy( launch.img, icon, sizeof( launch.img ) );
-    ::delete[] icon;
+    launch.IMG = ::ArchiveHICON( res.c_str(), MINICOVER );
 
     ids.push_back( id );
     map.emplace( id, launch );
@@ -138,32 +97,68 @@ void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unorder
     if ( i < 0 )
         return;
 
+    if ( map[ id ].IMG ) {
+        ::delete[] map[ id ].IMG;
+        map[ id ].IMG = nullptr;
+    }
+
     ids.erase( ids.begin() + i );
     map.erase( id );
 }
 
-::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( ::std::wstring& ) > add, ::std::function< void( ::std::wstring& ) > remove ) {
-    ::Directory dir = { add, remove, {} };
+void SortLink( ::std::vector< ::uint32_t >& display, ::std::unordered_map< ::uint32_t, ::Launch >& names ) {
+    ::std::sort( display.begin(), display.end(), [ & ]( ::uint32_t a, ::uint32_t b ) {
+        return names[ a ].Path < names[ b ].Path;
+    } );
+}
 
-    for ( auto& i : ::std::filesystem::directory_iterator( path, ::std::filesystem::directory_options::skip_permission_denied ) )
-        dir.fileadd.push_back( i.path().wstring() );
-
-    ::Directories[ path ] = dir;
-
+::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( ::std::wstring& ) > add, ::std::function< void( ::std::wstring& ) > remove, ::std::function< void() > sort ) {
     THREAD(
-        ::WatchDirectory( path, [ &path ]( int action, const wchar_t* name ) {
-            ::std::function< void() > func = [ &path, &action, &name ]() {
-                ::std::wstring fpath = ::String::WConcat( path, name );
-                ::Path( fpath );
+        ::std::vector< ::std::wstring > fileremove = {};
+        ::std::vector< ::std::wstring > fileadd = {};
+        ::relaxed_atomic< bool > update = true;
 
-                if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME )
-                    ::Directories[ path ].fileadd.push_back( fpath );
-                else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME )
-                    ::Directories[ path ].fileremove.push_back( fpath );
-            };
+        for ( const auto& i : ::std::filesystem::directory_iterator( path, ::std::filesystem::directory_options::skip_permission_denied ) )
+            fileadd.push_back( i.path().wstring() );
 
-            FUNCTION( func );
+        THREAD(
+            while ( true ) {
+                update.v.wait( false );
+                update = false;
+
+                for ( auto& i : fileremove )
+                    remove( i );
+                fileremove.clear();
+
+                ::std::vector< ::std::wstring > keep = {};
+
+                for ( auto& i : fileadd )
+                    for ( auto& f : ::IterateDirectory( i ) )
+                        if ( ::FileReady( f ) )
+                            add( f );
+                        else keep.push_back( f );
+                fileremove = keep;
+
+                sort();
+
+                ::std::this_thread::sleep_for( ::std::chrono::milliseconds( 500 ) );
+            }
+            , &
+        );
+
+        ::WatchDirectory( path, [ & ]( int action, const wchar_t* name ) {
+            ::std::wstring fpath = ::String::WConcat( path, name );
+            ::Path( fpath );
+
+            if ( action == FILE_ACTION_ADDED || action == FILE_ACTION_RENAMED_NEW_NAME )
+                fileadd.push_back( fpath );
+            else if ( action == FILE_ACTION_REMOVED || action == FILE_ACTION_RENAMED_OLD_NAME )
+                fileremove.push_back( fpath );
+
+            update = true;
+            update.v.notify_one();
         } );
+        , =
     );
 
     return S_OK;

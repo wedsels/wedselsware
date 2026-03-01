@@ -10,7 +10,7 @@ struct Search : ::GridUI {
     ::std::wstring Finding;
 
     ::std::vector< ::uint32_t >& GetDisplay() { return Found; }
-    ::uint32_t* GetImage( ::uint32_t item ) { return ::Saved::Songs[ item ].Minicover; }
+    ::uint32_t* GetImage( ::uint32_t item ) { return ::Library[ item ].Minicover; }
 
     void GridEnter( ::uint32_t item ) { ::SongInfo( item ); ::DisplayText.push_back( ::String::WConcat( L"Searching: ", Finding ) ); }
     void OutEnter() { ::DisplayText = { ::String::WConcat( L"Searching: ", Finding ) }; };
@@ -27,22 +27,22 @@ struct Search : ::GridUI {
                             if ( Finding == L"NULL" ) {
                                 Found.clear();
                                 for ( int i = 0; i < ::SongDisplay.size(); i++ )
-                                    if ( ::EmptyImage( ::Saved::Songs[ ::SongDisplay[ i ] ].Minicover, ARRAYSIZE( ::Saved::Songs[ ::SongDisplay[ i ] ].Minicover ) ) )
+                                    if ( !::Library[ ::SongDisplay[ i ] ].Minicover )
                                         Found.push_back( ::SongDisplay[ i ] );
                             } else if ( !Found.empty() ) {
                                 for ( int i = Found.size() - 1; i >= 0; i-- )
-                                    if ( !::wcsstr( ::Saved::Songs[ Found[ i ] ].Path, Finding.c_str() ) )
+                                    if ( !::Library[ Found[ i ] ].Path.contains( Finding ) )
                                         Found.erase( Found.begin() + i );
                             } else
                                 for ( int i = 0; i < ::SongDisplay.size(); i++ )
-                                    if ( ::wcsstr( ::Saved::Songs[ ::SongDisplay[ i ] ].Path, Finding.c_str() ) )
+                                    if ( ::Library[ ::SongDisplay[ i ] ].Path.contains( Finding ) )
                                         Found.push_back( ::SongDisplay[ i ] );
                         break;
                     case 2:
                             Found.clear();
                             if ( !Finding.empty() )
                                 for ( int i = 0; i < ::SongDisplay.size(); i++ )
-                                    if ( ::wcsstr( ::Saved::Songs[ ::SongDisplay[ i ] ].Path, Finding.c_str() ) )
+                                    if ( ::Library[ ::SongDisplay[ i ] ].Path.contains( Finding ) )
                                         Found.push_back( ::SongDisplay[ i ] );
                         break;
                 }
@@ -52,15 +52,21 @@ struct Search : ::GridUI {
     void OutKey() { return Keypress(); }
 
     void GridClick( ::uint32_t item ) {
-        ::media& s = ::Saved::Songs[ item ];
+        ::media& s = ::Library[ item ];
 
         if ( HELD( VK_LBUTTON ) ) {
             if ( HELD( VK_SHIFT ) )
-                ::queue::set( s.ID, ::Index( ::Queue(), s.ID ) > -1 ? 0 : 1 );
+                ::SetSong( s.ID );
             else
                 ::queue::add( s.ID, 1 );
         } else if ( PRESSED( VK_RBUTTON ) )
             ::Execute( s.Path, 1 );
+        else if ( PRESSED( VK_MBUTTON ) ) {
+            if ( HELD( VK_SHIFT ) )
+                ::WriteCovers( s );
+            else
+                ::Execute( ::String::WConcat( L"\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\" \"https://covers.musichoarders.xyz/?artist=", s.Artist, "&album=", s.Album, "&sources=applemusic,bugs,flo,itunes,kkbox,linemusic,musicbrainz,tidal", "\"" ), 2 );
+        }
     }
 
     void GridMove( ::uint32_t item ) {

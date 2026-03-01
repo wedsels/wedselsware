@@ -75,7 +75,7 @@ void DrawImage( ::Rect& r, ::uint32_t* img ) {
     int width = r.r - r.l;
     int height = r.b - r.t;
 
-    if ( !img || ::EmptyImage( img, width ) )
+    if ( !img )
         ::DrawBox( r, COLORGHOST );
     else for ( int y = 0; y < height; y++ )
         ::std::memcpy(

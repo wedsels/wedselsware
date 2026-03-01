@@ -11,7 +11,18 @@
 
 #define BLOCKONE( call, type ) do { bool block = false; ::Toggled[ type ] = true; for ( auto& i : ::FocusUI ) if ( i->Active() && i->BlockClick() ) { block = true; i->call(); } ::Toggled[ type ] = false; if ( block ) RETURN; } while ( 0 )
 
+#define EXTERNAL( var, call ) do { auto v = var; ::std::function< void() > f = [ &v ]() { v->call(); }; FUNCTION( f, false ); } while ( 0 )
+
 ::std::unordered_set< ::UI* > FocusUI;
+
+::INPUT inputs[ 2 ];
+void Stroke( ::WORD key ) {
+    key = ::MapVirtualKeyW( key, MAPVK_VK_TO_VSC );
+    inputs[ 0 ].ki.wScan = key;
+    inputs[ 1 ].ki.wScan = key;
+
+    ::SendInput( 2, inputs, sizeof( ::INPUT ) );
+}
 
 void SetHovers( bool clear = false ) {
     for ( auto it = ::FocusUI.begin(); it != ::FocusUI.end(); )
@@ -26,6 +37,8 @@ void SetHovers( bool clear = false ) {
             FocusUI.insert( i );
         }
 }
+
+#define PROFILE( body ) do { ::std::chrono::time_point s = ::std::chrono::high_resolution_clock::now(); body; ::std::cout<<"Executed: "<<::std::chrono::duration_cast< ::std::chrono::microseconds >( ::std::chrono::high_resolution_clock::now() - s ).count()<<'\n'; } while ( 0 )
 
 ::LRESULT CALLBACK InputProc( int nCode, ::WPARAM wParam, ::LPARAM lParam ) {
     if ( nCode == HC_ACTION ) {
@@ -42,7 +55,7 @@ void SetHovers( bool clear = false ) {
 
             if ( ::Input::globalkey.contains( key ) ) {
                 if ( ::Input::globalkey[ key ]() )
-                    return -1;
+                    RETURN;
             } else BLOCKKEY( key );
         } else switch ( wParam ) {
             case WM_MOUSEMOVE: {
@@ -51,8 +64,8 @@ void SetHovers( bool clear = false ) {
                     ::Input::mouse.y -= WINTOP;
 
                     if ( ::Input::mouse.x >= 0 && ::Input::mouse.y <= 0 && !::UI::Expand ) {
-                        ::SetTop();
-                        ::UI::Redraw();
+                        FUNCTIONVOID( ::SetTop, false );
+                        FUNCTIONVOID( ::UI::Redraw, false );
                         ::UI::Expand = true;
                     } else if ( ( ::Input::mouse.x < 0 || ::Input::mouse.y > ::UI::MaxSlide + 50 ) && ::UI::Expand )
                         ::UI::Expand = false;
@@ -96,12 +109,24 @@ void SetHovers( bool clear = false ) {
 }
 
 ::HRESULT InitInput() {
+    inputs[ 0 ].type = INPUT_KEYBOARD;
+    inputs[ 0 ].ki.wVk = 0;
+    inputs[ 0 ].ki.dwFlags = KEYEVENTF_SCANCODE;
+    inputs[ 0 ].ki.dwExtraInfo = NULL;
+    inputs[ 0 ].ki.time = NULL;
+
+    inputs[ 1 ].type = INPUT_KEYBOARD;
+    inputs[ 1 ].ki.wVk = 0;
+    inputs[ 1 ].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+    inputs[ 1 ].ki.dwExtraInfo = NULL;
+    inputs[ 1 ].ki.time = NULL;
+
     THREAD(
         ::SetWindowsHookExW( WH_KEYBOARD_LL, ::InputProc, NULL, 0 );
         ::SetWindowsHookExW( WH_MOUSE_LL, ::InputProc, NULL, 0 );
 
         ::MSG msg = { 0 };
-        while ( ::GetMessageW( &msg, NULL, 0, 0 ) && msg.message != WM_QUIT );
+        while ( ::GetMessageW( &msg, NULL, 0, 0 ) ) if ( MQUIT( msg.message ) ) break;
     );
 
     return S_OK;

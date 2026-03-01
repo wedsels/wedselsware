@@ -6,6 +6,7 @@
 
 #include <windows.h>
 #include <unordered_set>
+#include <shared_mutex>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -14,7 +15,6 @@
 #include <thread>
 #include <random>
 #include <ranges>
-#include <mutex>
 #include <map>
 
 #define MINICOVER 64
@@ -27,14 +27,20 @@
 #define MIDPOINT 512
 #define SEEK 12
 
-#define HR( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) return res; } while ( 0 )
-#define HER( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) { ::Box( ::std::system_category().message( res ).c_str() ); return res; } } while ( 0 )
-#define THREAD( body ) do { ::std::thread( [ = ] { body } ).detach(); } while ( 0 )
+#define TRY( body ) do { try { body; } catch ( const ::std::exception& e ) { ::std::cerr<<e.what()<<'\n'; } catch ( ... ) { ::std::cerr<<"Unknown Expection\n"; } } while ( 0 )
+
+#define HR( hr ) do { ::std::cerr<<#hr<<'\n'; ::HRESULT res = hr; if ( FAILED( res ) ) { ::std::cerr<<::std::system_category().message( res )<<'\n'; return res; } } while ( 0 )
+
+#define THREAD( body, ... ) TRY( ::std::thread( [ __VA_ARGS__ ] { body } ).detach(); )
 
 #define FUNCTION( func, ... ) do { ::std::cerr<<"function-"<<#func<<'\n'; ::Message( WM_FUNCTION, 0, ( ::LPARAM )&func, __VA_ARGS__ ); } while ( 0 )
+#define FUNCTIONVOID( func, ... ) do { ::std::cerr<<"void-"<<#func<<'\n'; ::Message( WM_VOID, 0, ( ::LPARAM )&func, __VA_ARGS__ ); } while ( 0 )
 
-#define WM_QUEUENEXT ( WM_USER + 1 )
-#define WM_FUNCTION ( WM_USER + 2 )
+#define MQUIT( m ) ( m == WM_CLOSE || m == WM_QUIT || m == WM_DESTROY || m == WM_ENDSESSION || m == WM_QUERYENDSESSION )
+
+#define WM_FUNCTION ( WM_USER + 1 )
+#define WM_VOID ( WM_USER + 2 )
+#define WM_SLEEP ( WM_USER + 3 )
 
 #define VK_SCROLL1 0x0E
 #define VK_SCROLL2 0x0F
@@ -50,12 +56,30 @@ inline ::HWND hwnd;
 inline ::HWND desktophwnd;
 inline ::HWND consolehwnd;
 
-extern ::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( ::std::wstring& ) > add, ::std::function< void( ::std::wstring& ) > remove );
+extern ::HRESULT InitDirectory( const wchar_t* path, ::std::function< void( ::std::wstring& ) > add, ::std::function< void( ::std::wstring& ) > remove, ::std::function< void() > sort );
 extern ::HRESULT InitGraphics();
 extern ::HRESULT InitDevice();
 extern ::HRESULT InitInput();
 extern ::HRESULT InitMixer();
+extern ::HRESULT InitAudio();
 extern ::HRESULT InitFont();
+extern ::HRESULT InitKeys();
+
+struct Launch {
+    ::std::wstring Path;
+    ::uint32_t* IMG;
+};
+
+extern void DeleteLink( ::uint32_t id, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void ArchiveLink( ::std::wstring path, ::std::vector< ::uint32_t >& ids, ::std::unordered_map< ::uint32_t, ::Launch >& map );
+extern void SortLink( ::std::vector< ::uint32_t >& display, ::std::unordered_map< ::uint32_t, ::Launch >& names );
+
+inline ::std::vector< ::uint32_t > Apps;
+inline ::std::unordered_map< ::uint32_t, ::Launch > AppsPath;
+inline ::std::vector< ::uint32_t > Webs;
+inline ::std::unordered_map< ::uint32_t, ::Launch > WebsPath;
+
+extern void Stroke( ::WORD key );
 
 namespace String {
     template< typename... Args >
@@ -111,6 +135,30 @@ inline void Path( ::std::wstring& path ) {
             i = ' ';
         else
             i = ::toupper( i );
+}
+
+inline ::std::string ClipboardText() {
+    if ( !::OpenClipboard( nullptr ) )
+        return "";
+
+    ::HANDLE hData = ::GetClipboardData( CF_TEXT );
+    if ( hData == nullptr ) {
+        ::CloseClipboard();
+        return "";
+    }
+
+    char* pszText = ( char* )::GlobalLock( hData );
+    if ( pszText == nullptr ) {
+        ::CloseClipboard();
+        return "";
+    }
+
+    ::std::string text( pszText );
+
+    ::GlobalUnlock( hData );
+    ::CloseClipboard();
+
+    return text;
 }
 
 template < typename... T >

@@ -281,6 +281,9 @@ bool CheckSlide() {
 }
 
 ::HRESULT InitGraphics() {
+    ::SetWindowLongPtrW( hwnd, GWL_EXSTYLE, WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE );
+    ::SetLayeredWindowAttributes( hwnd, 0, 255, LWA_ALPHA );
+
     HR( ::InitD3D11() );
     HR( ::InitTexture() );
     HR( ::InitShaders() );
@@ -304,7 +307,7 @@ bool CheckSlide() {
             bool slid = ::CheckSlide();
 
             for ( ::UI* i : ::UI::UIs ) {
-                ::std::lock_guard< ::std::mutex > lock( ::CanvasMutex );
+                ::std::shared_lock lock( ::CanvasMutex );
 
                 if ( i->Active() && ( slid || !i->BlockDraw() ) ) {
                     i->Draw();

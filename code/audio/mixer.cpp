@@ -55,12 +55,9 @@ void Clean( ::uint32_t entry ) {
                 if ( !FAILED( pVolume->SetMasterVolume( ( float )::Saved::Mixers[ id ], NULL ) ) ) {
                     if ( !::MixerEntries.contains( id ) ) {
                         ::MixerEntries[ id ] = {};
-                        ::wcsncpy_s( ::MixerEntries[ id ].name, ::MINIPATH, name.c_str(), ::MINIPATH - 1 );
+                        ::MixerEntries[ id ].name = name;
 
-                        ::uint32_t* icon = ::ArchiveHICON( p, MINICOVER );
-                        if ( icon )
-                            ::std::memcpy( ::MixerEntries[ id ].minicover, icon, sizeof( ::MixerEntries[ id ].minicover ) );
-                        ::delete[] icon;
+                        ::MixerEntries[ id ].minicover = ::ArchiveHICON( p, MINICOVER );
 
                         ::instances[ id ] = {};
                         ::MixersActive.push_back( id );
@@ -73,6 +70,10 @@ void Clean( ::uint32_t entry ) {
     }
 
     ::CloseHandle( hProcess );
+
+    ::std::sort( ::MixersActive.begin(), ::MixersActive.end(), [ & ]( ::uint32_t a, ::uint32_t b ) {
+        return ::MixerEntries[ a ].name < ::MixerEntries[ b ].name;
+    } );
 
     return id;
 }

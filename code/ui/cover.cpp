@@ -40,11 +40,11 @@ struct Cover : ::UI {
     }
 
     ::uint32_t LastPlayed;
-    double LastVolume;
+    ::uint32_t* LastCover;
 
-    void Clear() { LastPlayed = 0; LastVolume = 0.0; }
+    void Clear() { LastPlayed = 0; LastCover = nullptr; }
 
-    bool BlockDraw() { return ::Saved::Playing == LastPlayed && LastVolume == ::Saved::Volumes[ ::Saved::Playing ]; }
+    bool BlockDraw() { return ::Saved::Playing == LastPlayed && ::PlayingCover == LastCover; }
     void Draw() {
         ::Rect b = Bounds;
         if ( Slide > 0 ) {
@@ -52,10 +52,13 @@ struct Cover : ::UI {
             b.b -= Slide;
         }
 
-        ::DrawImage( b, ::Playing.Cover + MIDPOINT * Slide );
+        if ( ::PlayingCover )
+            ::DrawImage( b, ::PlayingCover + MIDPOINT * Slide );
+        else
+            ::DrawBox( b, COLORGHOST );
 
         LastPlayed = ::Saved::Playing;
-        LastVolume = ::Saved::Volumes[ ::Saved::Playing ];
+        LastCover = ::PlayingCover;
     }
 
     void Leave() { ::DisplayText.clear(); }

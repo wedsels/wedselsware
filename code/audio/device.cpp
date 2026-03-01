@@ -10,19 +10,18 @@
 static ::ma_context Context;
 static ::ma_device_config Config;
 
-void CleanDevice() {
+::HRESULT CleanDevice() {
+    ::ma_device_stop( &::Device );
     ::ma_device_uninit( &::Device );
-    ::ma_context_uninit( &::Context );
+    HR( ::ma_context_uninit( &::Context ) );
+    ::InitDevice();
+
+    return S_OK;
 }
 
 ::HRESULT SetDefaultDevice() {
-    ::PauseAudio = true;
-
-    ::ma_device_uninit( &::Device );
-
     ::ma_uint32 count;
     ::ma_device_info* infos;
-    HR( ::ma_context_init( NULL, 0, NULL, &::Context ) );
     HR( ::ma_context_get_devices( &::Context, &infos, &count, NULL, NULL) );
 
     for ( ::ma_uint32 iDevice = 0; iDevice < count; iDevice++ )
@@ -34,9 +33,6 @@ void CleanDevice() {
     HR( ::ma_device_init( &::Context, &::Config, &::Device ) );
     HR( ::ma_device_start( &::Device ) );
 
-    if ( ::Saved::Songs.size() > 0 )
-        ::SetSong( ::Saved::Playing );
-
     return S_OK;
 }
 
@@ -44,12 +40,14 @@ void CleanDevice() {
     ::av_log_set_level( AV_LOG_QUIET );
 
     ::Config = ::ma_device_config_init( ::ma_device_type_playback );
-    ::Config.dataCallback = []( ::ma_device* device, void* output, const void* input, ::ma_uint32 framecount ) { ::Decode( device, ( ::uint8_t* )output, framecount ); };
-    ::Config.stopCallback = []( ::ma_device* device ){ FUNCTION( ::SetDefaultDevice ); };
-    ::Config.playback.format = ma_format_f32;
+    ::Config.dataCallback = []( ::ma_device* device, void* output, const void*, ::ma_uint32 framecount ) { ::Decode( device, ( ::uint8_t* )output, framecount ); };
+    ::Config.notificationCallback = []( const ::ma_device_notification* n ) { if ( n->type == 1 || n->type == 2 ) FUNCTIONVOID( ::CleanDevice, false ); };
+    ::Config.playback.format = ::ma_format_f32;
     ::Config.periodSizeInFrames = 0;
     ::Config.sampleRate = 0;
     ::Config.periods = 0;
+
+    HR( ::ma_context_init( NULL, 0, NULL, &::Context ) );
 
     HR( ::SetDefaultDevice() );
 

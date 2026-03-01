@@ -6,15 +6,15 @@ struct Apps : ::GridUI {
 
     bool Active() { return ::GridType == ::GridTypes::Apps; }
 
-    ::std::vector< ::uint32_t >& GetDisplay() { return ::Saved::Apps; }
-    ::uint32_t* GetImage( ::uint32_t item ) { return ::Saved::AppsPath[ item ].img; }
+    ::std::vector< ::uint32_t >& GetDisplay() { return ::Apps; }
+    ::uint32_t* GetImage( ::uint32_t item ) { return ::AppsPath[ item ].IMG; }
 
-    void GridEnter( ::uint32_t item ) { ::DisplayText = { ::Saved::AppsPath[ item ].path }; }
+    void GridEnter( ::uint32_t item ) { ::DisplayText = { ::AppsPath[ item ].Path }; }
 
     void GridClick( ::uint32_t item ) {
         if ( PRESSED( VK_LBUTTON ) )
-            ::Execute( ::Saved::AppsPath[ item ].path );
+            ::Execute( ::AppsPath[ item ].Path );
         else if ( PRESSED( VK_RBUTTON ) )
-            ::Execute( ::Saved::AppsPath[ item ].path, 1 );
+            ::Execute( ::AppsPath[ item ].Path, 1 );
     }
-} Apps;
+} AppsDisplay;

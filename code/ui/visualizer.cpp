@@ -8,7 +8,7 @@ struct Visualizer : ::UI {
     bool BlockKey() { return false; }
 
     ::uint32_t LastOff;
-    ::uint16_t OldWave[ WINWIDTH ];
+    ::uint16_t OldWave[ WINWIDTH / 2 ];
 
     void Clear() {
         LastOff = 0;
@@ -17,7 +17,7 @@ struct Visualizer : ::UI {
 
     ::uint32_t Off() { return ::Frame / 6; }
 
-    bool BlockDraw() { return ( !OldWave[ 0 ] && !::Wave[ 0 ] || Off() == LastOff ) && !::std::memcmp( OldWave, OldWave, sizeof( OldWave ) ); }
+    bool BlockDraw() { return ( !OldWave[ 0 ] && !::Wave[ 0 ] || Off() == LastOff ) && !::std::memcmp( OldWave, Wave, sizeof( OldWave ) ); }
     void Draw() {
         LastOff = Off();
 
@@ -27,36 +27,35 @@ struct Visualizer : ::UI {
             b.b -= Slide;
         }
 
-        static const int dimensions = WINHEIGHT * WINWIDTH - 1;
-        static const int mask = MIDPOINT * MIDPOINT - 1;
+        const int maxy = WINHEIGHT - b.t;
+
         static const int width = WINWIDTH / 2;
+        static const int mask = MIDPOINT * MIDPOINT - 1;
 
         for ( int x = 0; x < width; x++ ) {
-            int wave = ::Wave[ x ];
+            int wave = ::std::min( ( int )::Wave[ width - x - 1 ], maxy );
             int y = 0;
 
-            int row = b.t * WINWIDTH;
+            int r = WINWIDTH - 1 - x;
+            int cx = ( width + x + LastOff * MIDPOINT ) & mask;
+
+            ::uint32_t* row = ::Canvas + b.t * WINWIDTH;
 
             for ( ; y < wave; y++ ) {
-                if ( row > dimensions )
-                    break;
+                ::uint32_t cover = COLORGHOST;
+                if ( ::PlayingCover && ::PlayingCover[ cx ] & 0xFF000000 )
+                    cover = ::PlayingCover[ cx ];
+                cx = ( cx + MIDPOINT ) & mask;
 
-                ::uint32_t cover = ::Playing.Cover[ ( width + x + ( y + LastOff ) * MIDPOINT ) & mask ];
-                if ( !( cover & 0xFF000000 ) )
-                    cover = COLORGHOST;
-
-                ::Canvas[ x + row ] = cover;
-                ::Canvas[ WINWIDTH - 1 - x + row ] = cover;
+                row[ x ] = cover;
+                row[ r ] = cover;
 
                 row += WINWIDTH;
             }
 
             for ( ; y < OldWave[ x ]; y++ ) {
-                if ( row > dimensions )
-                    break;
-
-                ::Canvas[ x + row ] = COLORALPHA;
-                ::Canvas[ WINWIDTH - 1 - x + row ] = COLORALPHA;
+                row[ x ] = COLORALPHA;
+                row[ r ] = COLORALPHA;
 
                 row += WINWIDTH;
             }

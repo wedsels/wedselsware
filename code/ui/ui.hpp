@@ -15,7 +15,7 @@
 
 inline ::uint32_t Frame;
 
-inline ::std::mutex CanvasMutex;
+inline ::std::shared_mutex CanvasMutex;
 
 inline const ::uint32_t CanvasSize = WINWIDTH * WINHEIGHT * sizeof( ::uint32_t );
 inline ::uint32_t* Canvas;
@@ -37,13 +37,6 @@ extern void DrawBox( ::Rect& t, ::uint32_t b );
 extern void DrawImage( ::Rect& r, ::uint32_t* img );
 extern void DrawString( int x, int y, int width, ::std::wstring& s );
 
-inline bool EmptyImage( const ::uint32_t* img, ::size_t s ) {
-    for ( ::size_t i = 0; i < s; ++i )
-        if ( img[ i ] )
-            return false;
-    return true;
-}
-
 inline ::uint32_t ToColor( double t ) {
     t *= 32.0;
 
@@ -55,7 +48,7 @@ inline ::uint32_t ToColor( double t ) {
 }
 
 struct Font {
-    static inline ::std::unordered_map< wchar_t, ::Font > Letters = {};
+    inline static ::std::unordered_map< wchar_t, ::Font > Letters = {};
 
     ::uint32_t* map;
     int width, height, yoff;
@@ -154,16 +147,18 @@ struct BarUI : ::UI {
         OffsetChanged();
     }
 
-    void Enter() { ::DisplayText = { ::String::WConcat( Reference() + Size(), L" / ", Count(), L"" ) }; }
+    void Enter() { ::DisplayText = { ::String::WConcat( Reference() + ::std::min( Count(), Size() ), L" / ", Count() ) }; }
     void Leave() { ::DisplayText.clear(); }
 
     double OldReference;
+    double OldCount;
 
-    void Clear() { OldReference = 0.0; }
+    void Clear() { OldReference = 0.0; OldCount = 0.0; }
 
-    bool BlockDraw() { return Reference() == OldReference; }
+    bool BlockDraw() { return Reference() == OldReference && Count() == OldCount; }
     void Draw() {
         OldReference = Reference();
+        OldCount = Count();
 
         Bounds = BaseRect();
         Bounds.t = Bounds.b;
@@ -173,7 +168,7 @@ struct BarUI : ::UI {
             Bounds.b -= Slide;
         }
 
-        double per = Reference() / ::std::max( 1.0, Count() - Size() );
+        double per = OldReference / ::std::max( 1.0, OldCount - Size() );
 
         ::DrawBox( Bounds, ::ToColor( per ) );
 
@@ -224,20 +219,22 @@ struct GridUI : ::UI {
     virtual ::uint32_t* GetImage( ::uint32_t item ) { return nullptr; }
 
     int LastIndex = -1;
-    double LastOffset;
-    ::size_t LastSize = -1;
+    double LastOffset = -1.0;
+    ::std::vector< ::uint32_t > LastDisplay;
     virtual void GridClear() {}
-    void Clear() { LastIndex = -1; LastOffset = 0; LastSize = -1; GridClear(); }
+    void Clear() { LastIndex = -1; LastOffset = -1.0; LastDisplay = {}; GridClear(); }
 
     void SetOffset( int off ) {
         Offset = ::std::clamp( off, 0, ::std::max( 0, ( int )GetDisplay().size() - Columns() * Rows() ) );
     }
 
     virtual bool GridBlockDraw() { return true; }
-    bool BlockDraw() { return Offset == LastOffset && GetDisplay().size() == LastSize && GridBlockDraw(); }
+    bool BlockDraw() { return Offset == LastOffset && GetDisplay() == LastDisplay && GridBlockDraw(); }
     void Draw() {
-        LastOffset = Offset;
-        LastSize = GetDisplay().size();
+        LastDisplay = GetDisplay();
+        LastOffset = Offset = ::std::min( Offset, ( double )LastDisplay.size() );
+
+        ::size_t size = LastDisplay.size();
 
         ::Rect b = Rect();
         if ( Slide > 0 ) {
@@ -254,11 +251,11 @@ struct GridUI : ::UI {
             int loc = i + Offset;
             ::Rect rect { b.l + ( MINICOVER ) * ( i % columns ), b.t + ( MINICOVER ) * ( i / columns ), MINICOVER };
 
-            if ( loc >= LastSize )
+            if ( loc >= size )
                 ::DrawBox( rect, COLORALPHA );
             else {
-                ::DrawImage( rect, GetImage( GetDisplay()[ loc ] ) );
-                Grid.push_back( GetDisplay()[ loc ] );
+                ::DrawImage( rect, GetImage( LastDisplay[ loc ] ) );
+                Grid.push_back( LastDisplay[ loc ] );
             }
         }
     }

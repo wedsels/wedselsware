@@ -6,15 +6,15 @@ struct Webs : ::GridUI {
 
     bool Active() { return ::GridType == ::GridTypes::Webs; }
 
-    ::std::vector< ::uint32_t >& GetDisplay() { return ::Saved::Webs; }
-    ::uint32_t* GetImage( ::uint32_t item ) { return ::Saved::WebsPath[ item ].img; }
+    ::std::vector< ::uint32_t >& GetDisplay() { return ::Webs; }
+    ::uint32_t* GetImage( ::uint32_t item ) { return ::WebsPath[ item ].IMG; }
 
-    void GridEnter( ::uint32_t item ) { ::DisplayText = { ::Saved::WebsPath[ item ].path }; }
+    void GridEnter( ::uint32_t item ) { ::DisplayText = { ::WebsPath[ item ].Path }; }
 
     void GridClick( ::uint32_t item ) {
         if ( PRESSED( VK_LBUTTON ) )
-            ::Execute( ::Saved::WebsPath[ item ].path );
+            ::Execute( ::WebsPath[ item ].Path );
         else if ( PRESSED( VK_RBUTTON ) )
-            ::Execute( ::Saved::WebsPath[ item ].path, 1 );
+            ::Execute( ::WebsPath[ item ].Path, 1 );
     }
-} Webs;
+} WebsDisplay;

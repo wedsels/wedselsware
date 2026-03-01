@@ -5,59 +5,70 @@ struct Queues : ::GridUI {
     ::Rect& Rect() { return Bounds; }
 
     ::std::vector< ::uint32_t >& GetDisplay() { return ::Queue(); }
-    ::uint32_t* GetImage( ::uint32_t item ) { return ::Saved::Songs[ item ].Minicover; }
+    ::uint32_t* GetImage( ::uint32_t item ) { return ::Library[ item ].Minicover; }
 
     void GridEnter( ::uint32_t item ) { ::SongInfo( item ); ::DisplayText.push_back( ::String::WConcat( L"Queue: ", ::Saved::Queue ) ); }
     void OutEnter() { ::DisplayText = { ::String::WConcat( L"Queue: ", ::Saved::Queue ) }; };
 
-    int Index;
+    ::size_t LastDisplay;
+    bool GridBlockDraw() {
+        bool b = LastDisplay == ::SongDisplay.size();
+        LastDisplay = ::SongDisplay.size();
+        return b;
+    }
+
+    int Clicked;
     bool Moved;
 
-    void GridClear() { Index = -1; Moved = false; }
+    void GridClear() { Clicked = -1; Moved = false; LastDisplay = 0; }
     void OutLeave() { GridClear(); }
 
     void GridMove( ::uint32_t item ) {
-        if ( Index < 0 )
+        if ( Clicked < 0 )
             return;
 
-        ::media& s = ::Saved::Songs[ item ];
-        int nindex = ::Index( ::Queue(), s.ID );
+        ::media& s = ::Library[ item ];
+        int nindex = Index();
 
-        if( nindex > -1 && Index != nindex ) {
-            ::uint32_t v = ::Queue()[ Index ];
-            ::Queue().erase( ::Queue().begin() + Index );
+        if( nindex > -1 && Clicked != nindex ) {
+            ::uint32_t v = ::Queue()[ Clicked ];
+            ::Queue().erase( ::Queue().begin() + Clicked );
             ::Queue().insert( ::Queue().begin() + nindex, v );
 
             Redraw();
 
-            Index = nindex;
+            Clicked = nindex;
             Moved = true;
         }
     }
 
     void GridClick( ::uint32_t item ) {
-        ::media& s = ::Saved::Songs[ item ];
+        ::media& s = ::Library[ item ];
 
         if ( RELEASED( VK_LBUTTON ) ) {
-            if ( !Moved && Index == ::Index( ::Queue(), s.ID ) ) {
+            if ( !Moved && Clicked == Index() ) {
                 if ( HELD( VK_SHIFT ) )
-                    ::queue::set( s.ID, Index > -1 ? 0 : 1 );
-                else if ( Index > -1 && ::Queue()[ Index ] != ::Saved::Playing )
-                    ::Queue().erase( ::Queue().begin() + Index );
-
-                Redraw();
+                    ::queue::set( s.ID, Clicked > -1 ? 0 : 1 );
+                else if ( Clicked > -1 )
+                    ::Queue().erase( ::Queue().begin() + Clicked );
             }
 
             GridClear();
         } else if ( PRESSED( VK_LBUTTON ) ) {
             if ( HELD( VK_SHIFT ) )
-                ::queue::set( s.ID, ::Index( ::Queue(), s.ID ) > -1 ? 0 : 1 );
+                ::queue::set( s.ID, 0 );
             else
-                Index = ::Index( ::Queue(), s.ID );
+                Clicked = Index();
         } else if ( PRESSED( VK_RBUTTON ) )
             ::Execute( s.Path, 1 );
-        else if ( PRESSED( VK_MBUTTON ) )
-            ::queue::clear();
+        else if ( PRESSED( VK_MBUTTON ) ) {
+            if ( HELD( VK_CONTROL ) )
+                ::queue::clear();
+            else if ( HELD( VK_SHIFT ) )
+                ::WriteCovers( s );
+            else
+                ::Execute( ::String::WConcat( L"\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\" \"https://covers.musichoarders.xyz/?artist=", s.Artist, "&album=", s.Album, "&sources=applemusic,bugs,flo,itunes,kkbox,linemusic,musicbrainz,tidal", "\"" ), 2 );
+        }
     }
 
     void XButton() {
